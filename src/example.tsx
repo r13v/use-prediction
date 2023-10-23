@@ -2,7 +2,7 @@ import { PredictionFn, usePrediction } from '../lib/use-prediction'
 
 let n = 0
 
-const getPrediction: PredictionFn = async (_, controller) => {
+const getLocal: PredictionFn = async (_, controller) => {
   n += 1
 
   return new Promise<string>((resolve, reject) => {
@@ -18,7 +18,7 @@ const getPrediction: PredictionFn = async (_, controller) => {
   })
 }
 
-const getOpenAIPrediction: PredictionFn = async (text, controller) => {
+const getOpenAI: PredictionFn = async (text, controller) => {
   if (!text) {
     return ''
   }
@@ -57,12 +57,9 @@ const getOpenAIPrediction: PredictionFn = async (text, controller) => {
 }
 
 export const Example = () => {
-  const inputP = usePrediction({ getPrediction, color: 'orange' })
+  const inputP = usePrediction({ get: getLocal, color: 'orange' })
 
-  const textAreaP = usePrediction({
-    getPrediction: getOpenAIPrediction,
-    debounce: 1000,
-  })
+  const textAreaP = usePrediction({ get: getOpenAI, debounce: 1000 })
 
   return (
     <div>

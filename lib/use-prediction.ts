@@ -11,7 +11,7 @@ export interface Params {
   /**
    * Predicts the next word based on the given value.
    */
-  getPrediction: PredictionFn
+  get: PredictionFn
 
   /**
    * Realtime prediction delay in milliseconds.
@@ -34,7 +34,7 @@ export interface Params {
 export const usePrediction = (params: Params) => {
   const {
     debounce = 500,
-    getPrediction,
+    get: getPrediction,
     style = {},
     color = '#98A5B4',
   } = params
