@@ -1,4 +1,4 @@
-import { PredictionFn, usePrediction } from '../lib/use-prediction'
+import { PredictionFn, usePrediction } from "../lib/use-prediction"
 
 let n = 0
 
@@ -11,32 +11,27 @@ const getLocal: PredictionFn = async (_, controller) => {
       n = 0
     }, 1000)
 
-    controller.signal.addEventListener('abort', () => {
+    controller.signal.addEventListener("abort", () => {
       clearTimeout(timeout)
-      reject(controller.signal.reason ?? new Error('Aborted'))
+      reject(controller.signal.reason ?? new Error("Aborted"))
     })
   })
 }
 
 const getOpenAI: PredictionFn = async (text, controller) => {
   if (!text) {
-    return ''
+    return ""
   }
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_TOKEN}`,
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_TOKEN}`,
     },
     body: JSON.stringify({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'user',
-          content: text,
-        },
-      ],
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: text }],
       temperature: 1,
       max_tokens: 5,
       top_p: 1,
@@ -57,7 +52,7 @@ const getOpenAI: PredictionFn = async (text, controller) => {
 }
 
 export const Example = () => {
-  const inputP = usePrediction({ get: getLocal, color: 'orange' })
+  const inputP = usePrediction({ get: getLocal, color: "orange" })
 
   const textAreaP = usePrediction({ get: getOpenAI, debounce: 1000 })
 

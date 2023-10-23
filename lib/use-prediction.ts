@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { CSSProperties, useCallback, useEffect, useRef } from "react"
 
 type Target = HTMLInputElement | HTMLTextAreaElement
 
@@ -28,7 +28,11 @@ export interface Params {
   /**
    * Additional styles for the mirror element.
    */
-  style?: React.CSSProperties
+  style?: CSSProperties
+}
+
+const isTabKey = (event: Event) => {
+  return event instanceof KeyboardEvent && event.key === "Tab"
 }
 
 export const usePrediction = (params: Params) => {
@@ -36,7 +40,7 @@ export const usePrediction = (params: Params) => {
     debounce = 500,
     get: getPrediction,
     style = {},
-    color = '#98A5B4',
+    color = "#98A5B4",
   } = params
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -45,7 +49,7 @@ export const usePrediction = (params: Params) => {
   const mirrorRef = useRef<HTMLDivElement | null>(null)
   const predictionRef = useRef<string | null>(null)
 
-  const styleRef = useRef<React.CSSProperties>(style)
+  const styleRef = useRef<CSSProperties>(style)
 
   const updateMirror = useCallback(() => {
     const mirror = mirrorRef.current
@@ -58,36 +62,35 @@ export const usePrediction = (params: Params) => {
     let prediction = predictionRef.current
 
     if (!prediction || !el) {
-      mirror.innerHTML = ''
+      mirror.innerHTML = ""
       return
     }
 
     let inputValue = el.value
 
-    // replace ending spaces with non-breaking spaces
+    // replace spaces between original text and predicted text with non-breaking spaces
     inputValue = inputValue.replace(/(\s+)$/, (match) => {
-      return match.replace(/\s/g, '&nbsp;')
+      return match.replace(/\s/g, "&nbsp;")
     })
 
-    // replace leading spaces with non-breaking spaces
     prediction = prediction.replace(/^(\s+)/, (match) => {
-      return match.replace(/\s/g, '&nbsp;')
+      return match.replace(/\s/g, "&nbsp;")
     })
 
     mirror.innerHTML = `<span style="opacity: 0">${inputValue}</span>${prediction}`
 
     const elStyles = window.getComputedStyle(el)
+    const rect = el.getBoundingClientRect()
 
     const mirrorStyles = `
     display: inline-block;
     position: absolute;
-    z-index: 1;
-    top: ${el.offsetTop}px;
-    left: ${el.offsetLeft}px;
+    z-index: 999999;
+    top: ${rect.top + window.scrollY}px;
+    left: ${rect.left + window.scrollX}px;
     height: ${elStyles.height};
     width: ${elStyles.width};
     padding: ${elStyles.padding};
-    margin: ${elStyles.margin};
     background: transparent;
     border: ${elStyles.border};
     border-color: transparent;
@@ -115,19 +118,18 @@ export const usePrediction = (params: Params) => {
     for (const key in styleRef.current) {
       const value = Reflect.get(styleRef.current, key)
 
-      if (typeof value === 'string') {
+      if (typeof value === "string" || value === null) {
         mirror.style.setProperty(key, value)
       }
     }
   }, [color])
 
-  // attach mirror
   useEffect(() => {
-    const host = window.document.createElement('div')
-    const shadow = host.attachShadow({ mode: 'open' })
+    const host = window.document.createElement("div")
+    const shadow = host.attachShadow({ mode: "open" })
 
-    const mirror = document.createElement('div')
-    mirror.style.display = 'inline-block'
+    const mirror = document.createElement("div")
+    mirror.style.display = "inline-block"
 
     mirrorRef.current = mirror
     shadow.append(mirror)
@@ -141,12 +143,11 @@ export const usePrediction = (params: Params) => {
     }
   }, [updateMirror])
 
-  // listen to keyup events
   useEffect(() => {
     const el = ref.current as Target | null
 
     if (!el) {
-      throw new Error('usePrediction: ref is not set')
+      throw new Error("usePrediction: ref is not set")
     }
 
     predictionRef.current = null
@@ -164,9 +165,9 @@ export const usePrediction = (params: Params) => {
       clearTimeout(tId)
       controller.abort()
 
-      const value = (event.target as Target).value
+      const { value } = event.target as Target
 
-      if (value.trim() === '') {
+      if (value.trim() === "") {
         return
       }
 
@@ -178,7 +179,7 @@ export const usePrediction = (params: Params) => {
           predictionRef.current = newPrediction
           updateMirror()
         } catch (error) {
-          if (error instanceof Error && error.name === 'AbortError') {
+          if (error instanceof Error && error.name === "AbortError") {
             return
           }
 
@@ -187,36 +188,37 @@ export const usePrediction = (params: Params) => {
       }, debounce)
     }
 
-    const cleanMirror = () => {
+    const onBlur = () => {
       predictionRef.current = null
       updateMirror()
     }
 
-    const applyPrediction = (event: Event) => {
+    const onKeydown = (event: Event) => {
       const prediction = predictionRef.current
-      const isTabPressed = event instanceof KeyboardEvent && event.key === 'Tab'
 
-      if (!isTabPressed || !prediction) {
+      if (!prediction || !isTabKey(event)) {
+        predictionRef.current = null
+        updateMirror()
         return
       }
 
       event.preventDefault()
+      event.stopPropagation()
 
-      const el = event.target as Target
       el.value += prediction
 
-      cleanMirror()
+      predictionRef.current = null
+      updateMirror()
     }
 
-    el.addEventListener('input', onInput)
-    el.addEventListener('keydown', cleanMirror)
-    el.addEventListener('keydown', applyPrediction)
-    el.addEventListener('blur', cleanMirror)
+    el.addEventListener("input", onInput)
+    el.addEventListener("keydown", onKeydown, { passive: false })
+    el.addEventListener("blur", onBlur)
 
     return () => {
-      el.removeEventListener('input', onInput)
-      el.removeEventListener('keydown', cleanMirror)
-      el.removeEventListener('blur', cleanMirror)
+      el.removeEventListener("input", onInput)
+      el.removeEventListener("keydown", onKeydown)
+      el.removeEventListener("blur", onBlur)
 
       clearTimeout(tId)
       controller.abort()

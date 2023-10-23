@@ -1,27 +1,47 @@
-# React + TypeScript + Vite
+# use-prediction
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+It is like a Copilot for your input fields.
 
-Currently, two official plugins are available:
+## Installation
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-   parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-   },
+```bash
+npm install use-prediction
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+## Usage
+
+```tsx
+import { usePrediction } from "use-prediction"
+
+const Example = () => {
+  const prediction = usePrediction({ get: getOpenAICompletion })
+
+  return (
+    <div>
+      <input ref={prediction.ref} />
+    </div>
+  )
+}
+
+function getOpenAICompletion(text: string, controller: AbortController) {
+  return fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${process.env.OPENAI_TOKEN}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: text }],
+      temperature: 1,
+      max_tokens: 5,
+      top_p: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+    }),
+    signal: controller.signal,
+  })
+    .then((res) => res.json())
+    .then((data) => data.choices[0].message.content)
+}
+```
