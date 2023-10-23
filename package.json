@@ -4,6 +4,7 @@
   "type": "module",
   "main": "dist/use-prediction.js",
   "types": "dist/use-prediction.d.ts",
+  "license": "MIT",
   "files": [
     "dist"
   ],
