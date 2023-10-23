@@ -1,18 +1,20 @@
-module.exports = {
-  root: true,
-  env: { browser: true, es2020: true },
-  extends: [
-    'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
-    'plugin:react-hooks/recommended',
+const { configure, presets } = require('eslint-kit')
+
+module.exports = configure({
+  mode: 'only-errors',
+  presets: [
+    presets.imports({
+      sort: {
+        newline: true,
+        groups: [['^\\u0000'], ['^node:'], ['^'], ['^\\.']],
+      },
+    }),
+    presets.typescript(),
+    presets.prettier(),
+    presets.node(),
+    presets.react({ version: '18.0' }),
   ],
-  ignorePatterns: ['dist', '.eslintrc.cjs'],
-  parser: '@typescript-eslint/parser',
-  plugins: ['react-refresh'],
-  rules: {
-    'react-refresh/only-export-components': [
-      'warn',
-      { allowConstantExport: true },
-    ],
+  extend: {
+    rules: {},
   },
-}
+})
