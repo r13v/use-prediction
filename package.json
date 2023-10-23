@@ -1,6 +1,6 @@
 {
   "name": "use-prediction",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "type": "module",
   "main": "dist/use-prediction.js",
   "types": "dist/use-prediction.d.ts",
