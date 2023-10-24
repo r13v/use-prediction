@@ -24,24 +24,22 @@ const Example = () => {
 }
 
 function getOpenAICompletion(text: string, controller: AbortController) {
-  return fetch("https://api.openai.com/v1/chat/completions", {
+  return fetch("https://api.openai.com/v1/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${process.env.OPENAI_TOKEN}`,
     },
     body: JSON.stringify({
-      model: "gpt-3.5-turbo",
-      messages: [{ role: "user", content: text }],
-      temperature: 1,
+      model: "gpt-3.5-turbo-instruct",
+      prompt: text,
+      temperature: 0,
       max_tokens: 5,
       top_p: 1,
-      frequency_penalty: 0,
-      presence_penalty: 0,
     }),
     signal: controller.signal,
   })
     .then((res) => res.json())
-    .then((data) => data.choices[0].message.content)
+    .then((data) => data.choices[0].text)
 }
 ```
