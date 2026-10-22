@@ -1,0 +1,201 @@
+[
+  {
+    "task": "support-reply",
+    "split": "tune",
+    "condition": "off",
+    "chars": 239,
+    "keystrokes": 239,
+    "ms": 68780,
+    "shown": 0,
+    "accepted": 0,
+    "acceptedChars": 0,
+    "latencies": [],
+    "suggestions": [],
+    "correct": true
+  },
+  {
+    "task": "bug-report",
+    "split": "tune",
+    "condition": "off",
+    "chars": 206,
+    "keystrokes": 206,
+    "ms": 58570,
+    "shown": 0,
+    "accepted": 0,
+    "acceptedChars": 0,
+    "latencies": [],
+    "suggestions": [],
+    "correct": true
+  },
+  {
+    "task": "support-reply",
+    "split": "tune",
+    "condition": "word",
+    "chars": 239,
+    "keystrokes": 199,
+    "ms": 57680,
+    "shown": 3,
+    "accepted": 3,
+    "acceptedChars": 47,
+    "latencies": [
+      1570.300000011921,
+      3105.800000011921,
+      2251.899999976158,
+      3559.300000011921,
+      2459,
+      1938.8999999761581,
+      1634.8999999761581,
+      4112.800000011921,
+      1948.4000000357628,
+      1653.8999999761581,
+      1821.0999999642372,
+      1647.2999999523163,
+      2848.899999976158,
+      1775.800000011921,
+      1972.5,
+      4251.699999988079
+    ],
+    "suggestions": [
+      {
+        "at": 60,
+        "text": "t and found that"
+      },
+      {
+        "at": 160,
+        "text": " to appear on your original payment method."
+      },
+      {
+        "at": 215,
+        "text": "ave any other questions."
+      }
+    ],
+    "correct": true
+  },
+  {
+    "task": "support-reply",
+    "split": "tune",
+    "condition": "tab",
+    "chars": 239,
+    "keystrokes": 212,
+    "ms": 60890,
+    "shown": 4,
+    "accepted": 2,
+    "acceptedChars": 29,
+    "latencies": [
+      1593.3999999761581,
+      2019.7000000476837,
+      1833.300000011921,
+      2263.900000035763,
+      1977.1000000238419,
+      1724,
+      1626,
+      2259.7999999523163,
+      2971.699999988079,
+      2134.600000023842,
+      1755.3999999761581,
+      1959,
+      1744.6000000238419,
+      2365,
+      4066.600000023842
+    ],
+    "suggestions": [
+      {
+        "at": 29,
+        "text": "hing out."
+      },
+      {
+        "at": 58,
+        "text": "unt and can confirm that"
+      },
+      {
+        "at": 146,
+        "text": " business days to appear on your original payment method."
+      },
+      {
+        "at": 219,
+        "text": "any other questions."
+      }
+    ],
+    "correct": true
+  },
+  {
+    "task": "bug-report",
+    "split": "tune",
+    "condition": "word",
+    "chars": 206,
+    "keystrokes": 203,
+    "ms": 57610,
+    "shown": 3,
+    "accepted": 1,
+    "acceptedChars": 4,
+    "latencies": [
+      2170.2999999523163,
+      1718,
+      2181.100000023842,
+      1771.199999988079,
+      1761.800000011921,
+      2114.100000023842,
+      1942.6000000238419,
+      3071.5,
+      3210.399999976158,
+      3524.800000011921,
+      2453,
+      1886,
+      1879.9000000357628,
+      1953.6000000238419,
+      1960.7999999523163,
+      1799.3999999761581
+    ],
+    "suggestions": [
+      {
+        "at": 35,
+        "text": "MB, the upload fails."
+      },
+      {
+        "at": 59,
+        "text": "it fails to upload."
+      },
+      {
+        "at": 202,
+        "text": "fox."
+      }
+    ],
+    "correct": true
+  },
+  {
+    "task": "bug-report",
+    "split": "tune",
+    "condition": "tab",
+    "chars": 206,
+    "keystrokes": 206,
+    "ms": 58870,
+    "shown": 1,
+    "accepted": 0,
+    "acceptedChars": 0,
+    "latencies": [
+      2040.5,
+      1792.800000011921,
+      1604.6000000238419,
+      1963.300000011921,
+      2451.2000000476837,
+      1707.4000000357628,
+      3110.400000035763,
+      2823,
+      3476,
+      3838.599999964237,
+      2212.100000023842,
+      1864.1000000238419,
+      1793.0999999642372,
+      1687.5999999642372,
+      1788.4000000357628,
+      2905.7000000476837
+    ],
+    "suggestions": [
+      {
+        "at": 63,
+        "text": "upload fails without an error message."
+      }
+    ],
+    "correct": true
+  }
+]

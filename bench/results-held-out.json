@@ -1,0 +1,461 @@
+[
+  {
+    "task": "cover-letter",
+    "split": "held-out",
+    "condition": "off",
+    "chars": 248,
+    "keystrokes": 248,
+    "ms": 68260,
+    "shown": 0,
+    "accepted": 0,
+    "acceptedChars": 0,
+    "latencies": [],
+    "suggestions": [],
+    "correct": true
+  },
+  {
+    "task": "grant-summary",
+    "split": "held-out",
+    "condition": "off",
+    "chars": 230,
+    "keystrokes": 230,
+    "ms": 63200,
+    "shown": 0,
+    "accepted": 0,
+    "acceptedChars": 0,
+    "latencies": [],
+    "suggestions": [],
+    "correct": true
+  },
+  {
+    "task": "delivery-delay-ru",
+    "split": "held-out",
+    "condition": "off",
+    "chars": 196,
+    "keystrokes": 196,
+    "ms": 56220,
+    "shown": 0,
+    "accepted": 0,
+    "acceptedChars": 0,
+    "latencies": [],
+    "suggestions": [],
+    "correct": true
+  },
+  {
+    "task": "product-ru",
+    "split": "held-out",
+    "condition": "off",
+    "chars": 179,
+    "keystrokes": 179,
+    "ms": 50530,
+    "shown": 0,
+    "accepted": 0,
+    "acceptedChars": 0,
+    "latencies": [],
+    "suggestions": [],
+    "correct": true
+  },
+  {
+    "task": "cover-letter",
+    "split": "held-out",
+    "condition": "word",
+    "chars": 248,
+    "keystrokes": 221,
+    "ms": 62520,
+    "shown": 4,
+    "accepted": 2,
+    "acceptedChars": 33,
+    "latencies": [
+      2107.300000011921,
+      2177,
+      1941.699999988079,
+      1678,
+      2391,
+      2488,
+      4603.700000047684,
+      2260.199999988079,
+      2071.699999988079,
+      2349.900000035763,
+      1579,
+      2555.100000023842,
+      2828.800000011921,
+      2851.899999976158,
+      2131.7000000476837,
+      2016.199999988079
+    ],
+    "suggestions": [
+      {
+        "at": 23,
+        "text": "writing to express my interest in the position."
+      },
+      {
+        "at": 48,
+        "text": "position at your company."
+      },
+      {
+        "at": 75,
+        "text": "sition."
+      },
+      {
+        "at": 209,
+        "text": "that experience to your team."
+      }
+    ],
+    "correct": true
+  },
+  {
+    "task": "cover-letter",
+    "split": "held-out",
+    "condition": "abort",
+    "chars": 248,
+    "keystrokes": 248,
+    "ms": 68260,
+    "shown": 0,
+    "accepted": 0,
+    "acceptedChars": 0,
+    "latencies": [],
+    "suggestions": [],
+    "correct": true
+  },
+  {
+    "task": "cover-letter",
+    "split": "held-out",
+    "condition": "tab",
+    "chars": 248,
+    "keystrokes": 248,
+    "ms": 68860,
+    "shown": 2,
+    "accepted": 0,
+    "acceptedChars": 0,
+    "latencies": [
+      2044.5,
+      1770.800000011921,
+      5040.899999976158,
+      2186.900000035763,
+      2614.400000035763,
+      2773.199999988079,
+      2765.900000035763,
+      1569.3999999761581,
+      3945.699999988079,
+      1949.3999999761581,
+      1617.300000011921,
+      2990.100000023842,
+      2597.399999976158,
+      3187.899999976158,
+      1813.5
+    ],
+    "suggestions": [
+      {
+        "at": 22,
+        "text": " writing to express my interest in this position."
+      },
+      {
+        "at": 213,
+        "text": " experience to your team."
+      }
+    ],
+    "correct": true
+  },
+  {
+    "task": "grant-summary",
+    "split": "held-out",
+    "condition": "word",
+    "chars": 230,
+    "keystrokes": 211,
+    "ms": 59770,
+    "shown": 5,
+    "accepted": 3,
+    "acceptedChars": 25,
+    "latencies": [
+      3079.5,
+      2370.199999988079,
+      1716,
+      2022,
+      1713.5,
+      2835.399999976158,
+      1537.9000000357628,
+      1807,
+      2034.199999988079,
+      1468.6000000238419,
+      1622.8999999761581,
+      1628.1000000238419,
+      1760.699999988079,
+      1880.7000000476837,
+      2442.5
+    ],
+    "suggestions": [
+      {
+        "at": 128,
+        "text": "household items."
+      },
+      {
+        "at": 139,
+        "text": "he project will reduce waste and build practical skills."
+      },
+      {
+        "at": 162,
+        "text": "ce waste and build practical skills in the community."
+      },
+      {
+        "at": 190,
+        "text": " repair skills."
+      },
+      {
+        "at": 217,
+        "text": "the community."
+      }
+    ],
+    "correct": true
+  },
+  {
+    "task": "grant-summary",
+    "split": "held-out",
+    "condition": "abort",
+    "chars": 230,
+    "keystrokes": 230,
+    "ms": 63200,
+    "shown": 0,
+    "accepted": 0,
+    "acceptedChars": 0,
+    "latencies": [],
+    "suggestions": [],
+    "correct": true
+  },
+  {
+    "task": "grant-summary",
+    "split": "held-out",
+    "condition": "tab",
+    "chars": 230,
+    "keystrokes": 230,
+    "ms": 64400,
+    "shown": 4,
+    "accepted": 0,
+    "acceptedChars": 0,
+    "latencies": [
+      2743.900000035763,
+      2052.699999988079,
+      2238,
+      1733.800000011921,
+      2486.699999988079,
+      3342.400000035763,
+      1706.800000011921,
+      1668.3999999761581,
+      2451.400000035763,
+      1524.8999999761581,
+      3215.5,
+      3148,
+      2075.399999976158,
+      1595.300000011921,
+      1873.300000011921,
+      1891.9000000357628
+    ],
+    "suggestions": [
+      {
+        "at": 24,
+        "text": " center that provides essential services to local residents."
+      },
+      {
+        "at": 146,
+        "text": "ect will reduce waste and build practical skills within the community."
+      },
+      {
+        "at": 168,
+        "text": "te and build practical skills and community connections."
+      },
+      {
+        "at": 191,
+        "text": "repair skills."
+      }
+    ],
+    "correct": true
+  },
+  {
+    "task": "delivery-delay-ru",
+    "split": "held-out",
+    "condition": "word",
+    "chars": 196,
+    "keystrokes": 175,
+    "ms": 50550,
+    "shown": 3,
+    "accepted": 1,
+    "acceptedChars": 22,
+    "latencies": [
+      1930.699999988079,
+      1842.699999988079,
+      1872.300000011921,
+      2173.400000035763,
+      1885.5999999642372,
+      2118.800000011921,
+      1862.9000000357628,
+      1886,
+      1460.5,
+      1979.9000000357628,
+      1925.8999999761581,
+      2367.800000011921,
+      1537.699999988079,
+      1955.300000011921,
+      1839.1000000238419
+    ],
+    "suggestions": [
+      {
+        "at": 39,
+        "text": " за задержку доставки."
+      },
+      {
+        "at": 118,
+        "text": "ближайшее время."
+      },
+      {
+        "at": 159,
+        "text": "предлагаем скидку на следующий заказ."
+      }
+    ],
+    "correct": true
+  },
+  {
+    "task": "delivery-delay-ru",
+    "split": "held-out",
+    "condition": "tab",
+    "chars": 196,
+    "keystrokes": 174,
+    "ms": 50330,
+    "shown": 3,
+    "accepted": 1,
+    "acceptedChars": 23,
+    "latencies": [
+      2022.6000000238419,
+      1861,
+      1611.300000011921,
+      1818,
+      3208,
+      3196.2000000476837,
+      4507.5,
+      3294.199999988079,
+      1608.0999999642372,
+      2033.1000000238419,
+      2978.199999988079,
+      2570.599999964237,
+      2326.699999988079
+    ],
+    "suggestions": [
+      {
+        "at": 38,
+        "text": "я за задержку доставки."
+      },
+      {
+        "at": 101,
+        "text": "."
+      },
+      {
+        "at": 157,
+        "text": "и предлагаем скидку на следующий заказ."
+      }
+    ],
+    "correct": true
+  },
+  {
+    "task": "delivery-delay-ru",
+    "split": "held-out",
+    "condition": "abort",
+    "chars": 196,
+    "keystrokes": 196,
+    "ms": 56220,
+    "shown": 0,
+    "accepted": 0,
+    "acceptedChars": 0,
+    "latencies": [],
+    "suggestions": [],
+    "correct": true
+  },
+  {
+    "task": "product-ru",
+    "split": "held-out",
+    "condition": "word",
+    "chars": 179,
+    "keystrokes": 175,
+    "ms": 50250,
+    "shown": 2,
+    "accepted": 2,
+    "acceptedChars": 6,
+    "latencies": [
+      1855.9000000357628,
+      1693,
+      2168.800000011921,
+      1842.800000011921,
+      1906.2000000476837,
+      1765.6000000238419,
+      2048.300000011921,
+      3925,
+      1596.800000011921,
+      1938.699999988079,
+      2082.599999964237,
+      3826
+    ],
+    "suggestions": [
+      {
+        "at": 63,
+        "text": "бука и удобные карманы для мелочей."
+      },
+      {
+        "at": 78,
+        "text": "ов обеспечивает удобную защиту техники."
+      }
+    ],
+    "correct": true
+  },
+  {
+    "task": "product-ru",
+    "split": "held-out",
+    "condition": "tab",
+    "chars": 179,
+    "keystrokes": 177,
+    "ms": 50990,
+    "shown": 3,
+    "accepted": 1,
+    "acceptedChars": 3,
+    "latencies": [
+      1807.800000011921,
+      1703,
+      2490.599999964237,
+      2146.599999964237,
+      1858.199999988079,
+      1491.6000000238419,
+      1945.5,
+      2228.7000000476837,
+      1671.300000011921,
+      1634.9000000357628,
+      1998.4000000357628,
+      1963.199999988079,
+      2706
+    ],
+    "suggestions": [
+      {
+        "at": 63,
+        "text": "бука и удобные карманы для мелочей"
+      },
+      {
+        "at": 77,
+        "text": "мов"
+      },
+      {
+        "at": 123,
+        "text": "для ценных вещей."
+      }
+    ],
+    "correct": true
+  },
+  {
+    "task": "product-ru",
+    "split": "held-out",
+    "condition": "abort",
+    "chars": 179,
+    "keystrokes": 179,
+    "ms": 50530,
+    "shown": 0,
+    "accepted": 0,
+    "acceptedChars": 0,
+    "latencies": [],
+    "suggestions": [],
+    "correct": true
+  }
+]

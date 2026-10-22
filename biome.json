@@ -1,0 +1,75 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"ignoreUnknown": true,
+		"includes": ["**", "!!.claude", "!!dist", "!bench/results-*.json"]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab"
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended",
+			"nursery": {
+				"noFloatingPromises": "error",
+				"noMisusedPromises": "error"
+			},
+			"style": {
+				"noNestedTernary": "error",
+				"useSingleVarDeclarator": "error",
+				"useFilenamingConvention": {
+					"level": "error",
+					"options": {
+						"filenameCases": ["kebab-case"]
+					}
+				}
+			}
+		}
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "double",
+			"arrowParentheses": "always",
+			"semicolons": "asNeeded",
+			"trailingCommas": "all"
+		}
+	},
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["lib/**"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noNodejsModules": "error",
+						"noProcessGlobal": "error"
+					},
+					"style": {
+						"noRestrictedGlobals": {
+							"level": "error",
+							"options": {
+								"deniedGlobals": {
+									"Buffer": "The library runs in the browser, which has no Buffer; use Uint8Array"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	]
+}
