@@ -50,24 +50,28 @@ export const insertText = (field: Field, text: string, at: number) => {
 	field.setSelectionRange(at, at)
 
 	// jsdom and some embedded browsers have no editing commands.
-	if (
-		typeof document.execCommand === "function" &&
-		document.execCommand("insertText", false, text)
-	) {
+	const hasEditing = typeof document.execCommand === "function"
+
+	if (hasEditing && document.execCommand("insertText", false, text)) {
 		return
 	}
 
 	// Set the value through the prototype setter so React's value tracker
 	// notices the change. This path can't be undone.
-	const prototype =
-		field instanceof HTMLTextAreaElement
-			? HTMLTextAreaElement.prototype
-			: HTMLInputElement.prototype
-	const setValue = Object.getOwnPropertyDescriptor(prototype, "value")!.set!
+	const isTextarea = field instanceof HTMLTextAreaElement
+	const prototype = isTextarea
+		? HTMLTextAreaElement.prototype
+		: HTMLInputElement.prototype
 	const { value } = field
+	const caretAfter = at + text.length
 
-	setValue.call(field, value.slice(0, at) + text + value.slice(at))
-	field.setSelectionRange(at + text.length, at + text.length)
+	Reflect.set(
+		prototype,
+		"value",
+		value.slice(0, at) + text + value.slice(at),
+		field,
+	)
+	field.setSelectionRange(caretAfter, caretAfter)
 	field.dispatchEvent(
 		new InputEvent("input", {
 			bubbles: true,

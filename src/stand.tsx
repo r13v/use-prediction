@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, version } from "react"
 
-import { usePrediction } from "../lib/use-prediction"
+import { type PredictionFn, usePrediction } from "../lib/use-prediction"
 import { FormPleaseDemo } from "./form-please-demo"
 import { params, predictFor, predictionsOn } from "./predict"
 
@@ -118,19 +118,7 @@ const DialogField = () => {
 /** The single field the comparison script types into. */
 const BenchField = ({ context }: { context: string }) => {
 	const [value, setValue] = useState("")
-	const get = useMemo(() => {
-		const predict = predictFor(context)
-		const latencies: number[] = []
-		Object.assign(window, { latencies })
-
-		return async (request: Parameters<typeof predict>[0]) => {
-			const started = performance.now()
-			const suggestion = await predict(request)
-			latencies.push(performance.now() - started)
-
-			return suggestion
-		}
-	}, [context])
+	const get = useMemo(() => measuredPredictor(context), [context])
 	const prediction = usePrediction({ get })
 
 	return (
@@ -149,4 +137,19 @@ const BenchField = ({ context }: { context: string }) => {
 			<span data-testid="bench-suggestion">{prediction.suggestion}</span>
 		</main>
 	)
+}
+
+/** Calls the stand predictor and records each latency in `window.latencies` for `bench/compare.ts`. */
+const measuredPredictor = (context: string): PredictionFn => {
+	const predict = predictFor(context)
+	const latencies: number[] = []
+	Object.assign(window, { latencies })
+
+	return async (request) => {
+		const started = performance.now()
+		const suggestion = await predict(request)
+		latencies.push(performance.now() - started)
+
+		return suggestion
+	}
 }

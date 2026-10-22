@@ -1,11 +1,14 @@
 import { act, type ReactNode, StrictMode, useState, version } from "react"
+// Imported straight from react-dom, so the test runs on whichever React
+// version the alias in vite.config.ts selects.
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
 import { type PredictionFn, usePrediction } from "./use-prediction"
 
-// Imported straight from react-dom, so the test runs on whichever React
-// version the alias in vite.config.ts selects.
+// The default debounce of the hook.
+const DEBOUNCE_MS = 300
+
 declare global {
 	var IS_REACT_ACT_ENVIRONMENT: boolean
 }
@@ -16,21 +19,27 @@ let root: Root | null = null
 const render = (node: ReactNode) => {
 	const container = document.createElement("div")
 	document.body.append(container)
-	root = createRoot(container)
-	act(() => root!.render(<StrictMode>{node}</StrictMode>))
 
-	return { unmount: () => act(() => root!.unmount()) }
+	const created = createRoot(container)
+	root = created
+	act(() => created.render(<StrictMode>{node}</StrictMode>))
+
+	return { unmount: () => act(() => created.unmount()) }
 }
 
-const byTestId = <T extends HTMLElement = HTMLElement>(id: string) =>
-	document.querySelector<T>(`[data-testid="${id}"]`)!
+const byTestId = <T extends HTMLElement = HTMLElement>(id: string) => {
+	const element = document.querySelector<T>(`[data-testid="${id}"]`)
+
+	if (!element) {
+		throw new Error(`No element with data-testid="${id}"`)
+	}
+
+	return element
+}
 
 /** Sets the value the way typing does, so React's onChange runs. */
 const typeValue = (field: HTMLTextAreaElement, value: string) => {
-	Object.getOwnPropertyDescriptor(
-		HTMLTextAreaElement.prototype,
-		"value",
-	)!.set!.call(field, value)
+	Reflect.set(HTMLTextAreaElement.prototype, "value", value, field)
 	field.setSelectionRange(value.length, value.length)
 	act(() => {
 		field.dispatchEvent(new InputEvent("input", { bubbles: true }))
@@ -44,10 +53,13 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-	if (root) {
-		act(() => root!.unmount())
+	const mounted = root
+
+	if (mounted) {
+		act(() => mounted.unmount())
 		root = null
 	}
+
 	document.body.innerHTML = ""
 	vi.useRealTimers()
 })
@@ -95,7 +107,7 @@ it(`syncs an accepted suggestion with controlled state on React ${version}`, asy
 	await act(() => vi.advanceTimersByTimeAsync(0))
 
 	typeValue(field, "hello")
-	await act(() => vi.advanceTimersByTimeAsync(301))
+	await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS + 1))
 
 	expect(get).toHaveBeenCalledTimes(1)
 	expect(byTestId("suggestion").textContent).toBe(" world")
@@ -141,7 +153,7 @@ it("drops the ghost when a render replaces the controlled value", async () => {
 	act(() => {
 		field.dispatchEvent(new InputEvent("input", { bubbles: true }))
 	})
-	await act(() => vi.advanceTimersByTimeAsync(301))
+	await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS + 1))
 	expect(document.querySelector("[data-use-prediction]")?.textContent).toBe(
 		"hello big world",
 	)
@@ -157,7 +169,7 @@ it("cleans up the overlay on unmount", async () => {
 	const field = byTestId<HTMLTextAreaElement>("field")
 	field.focus()
 	typeValue(field, "hello")
-	await act(() => vi.advanceTimersByTimeAsync(300))
+	await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS))
 	expect(document.querySelector("[data-use-prediction]")).not.toBeNull()
 
 	unmount()

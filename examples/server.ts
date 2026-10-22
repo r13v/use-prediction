@@ -30,6 +30,17 @@ export interface PredictionBody {
 	context?: string
 }
 
+const DEFAULT_MODEL = "gpt-6-luna"
+// Enough context for the current paragraph, with a bounded price per request.
+const MAX_BEFORE_CHARS = 2000
+const MAX_AFTER_CHARS = 500
+// A suggestion runs to the end of a clause, so a few words are enough.
+const MAX_SUGGESTION_TOKENS = 40
+// What a model writes when it means "no suggestion": `_empty_`, `<none>`, `(no suggestion)`.
+const PLACEHOLDER = /^[_*<[(]+\s*(empty|none|no suggestion)\s*[_*>\])]+$/i
+// A shorter repeat of the text after the cursor matches by chance too often.
+const MIN_REPEAT_CHARS = 4
+
 let client: OpenAI | undefined
 
 const getClient = () => {
@@ -41,25 +52,33 @@ const getClient = () => {
 	return client
 }
 
-const withApiPath = (url: string | undefined) =>
-	url && new URL(url).pathname === "/" ? new URL("/v1", url).href : url
+const withApiPath = (url: string | undefined) => {
+	if (!url) {
+		return url
+	}
+
+	const bareOrigin = new URL(url).pathname === "/"
+
+	return bareOrigin ? new URL("/v1", url).href : url
+}
 
 export async function predict(body: PredictionBody, signal?: AbortSignal) {
-	const before = body.before.slice(-2000)
-	const after = body.after.slice(0, 500)
+	const before = body.before.slice(-MAX_BEFORE_CHARS)
+	const after = body.after.slice(0, MAX_AFTER_CHARS)
+	const field = body.context ? `Field: ${body.context}` : ""
 
 	const response = await getClient().responses.create(
 		{
-			model: process.env.LLM_MODEL ?? "gpt-6-luna",
+			model: process.env.LLM_MODEL ?? DEFAULT_MODEL,
 			instructions: INSTRUCTIONS,
 			input: [
-				body.context ? `Field: ${body.context}` : "",
+				field,
 				`Text before the cursor:\n<<<${before}>>>`,
 				`Text after the cursor:\n<<<${after}>>>`,
 			]
 				.filter(Boolean)
 				.join("\n\n"),
-			max_output_tokens: 40,
+			max_output_tokens: MAX_SUGGESTION_TOKENS,
 			reasoning: { effort: "none" },
 			store: false,
 		},
@@ -80,27 +99,33 @@ export function cleanSuggestion(
 ) {
 	let result = suggestion.replace(/^<<<|>>>$/g, "")
 
-	if (
-		/^[_*<[(]+\s*(empty|none|no suggestion)\s*[_*>\])]+$/i.test(result.trim())
-	) {
+	if (PLACEHOLDER.test(result.trim())) {
 		return ""
 	}
 
 	result = cutRepeat(result, after)
 
-	if (/\s$/.test(before) || before === "") {
+	const spaceBefore = /\s$/.test(before) || before === ""
+
+	if (spaceBefore) {
 		result = result.trimStart()
 	}
 
-	// A caret inside a word: the suggestion fills the middle of that word.
-	if (/[\p{L}\p{N}]$/u.test(before) && /^[\p{L}\p{N}]/u.test(after)) {
+	// The suggestion fills the middle of the word that the caret is in.
+	const caretInWord =
+		/[\p{L}\p{N}]$/u.test(before) && /^[\p{L}\p{N}]/u.test(after)
+
+	if (caretInWord) {
 		return result
 	}
 
 	result = result.trimEnd()
 
 	// Keep the suggestion apart from a word or an opening bracket after the caret.
-	if (/^[\p{L}\p{N}([]/u.test(after) && /[\p{L}\p{N},.;:!?)]$/u.test(result)) {
+	const needsSpace =
+		/^[\p{L}\p{N}([]/u.test(after) && /[\p{L}\p{N},.;:!?)]$/u.test(result)
+
+	if (needsSpace) {
 		result += " "
 	}
 
@@ -112,10 +137,9 @@ export function cleanSuggestion(
  * that text stays in the field, so the repeat would show twice.
  */
 const cutRepeat = (suggestion: string, after: string) => {
-	// The first words after the cursor; a shorter match is too likely by chance.
 	const head = /^\S+(?:\s+\S+){0,2}/.exec(after.trimStart())?.[0]
 
-	if (!head || head.length < 4) {
+	if (!head || head.length < MIN_REPEAT_CHARS) {
 		return suggestion
 	}
 
@@ -132,6 +156,7 @@ export async function handlePrediction(
 ) {
 	if (req.method !== "POST") {
 		res.writeHead(405).end()
+
 		return
 	}
 
@@ -155,6 +180,7 @@ export async function handlePrediction(
 
 		if (typeof body.before !== "string" || typeof body.after !== "string") {
 			res.writeHead(400).end()
+
 			return
 		}
 

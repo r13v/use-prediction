@@ -1,9 +1,16 @@
-import { expect, type Page, test } from "@playwright/test"
+import { expect, type Page, type Route, test } from "@playwright/test"
 
 interface Body {
 	before: string
 	after: string
 }
+
+// Slow enough to see the loading indicator before the answer arrives.
+const SLOW_ANSWER_MS = 800
+// About one character: how far the loading indicator may stand from the caret.
+const CARET_TOLERANCE_PX = 20
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /** Answers /api/predict from a table; counts the requests that reach it. */
 const mockPredictions = async (
@@ -13,16 +20,19 @@ const mockPredictions = async (
 ) => {
 	const requests: Body[] = []
 
-	await page.route("**/api/predict", async (route) => {
+	const answer = async (route: Route) => {
 		const body = route.request().postDataJSON() as Body
 		requests.push(body)
 
 		if (delay) {
-			await new Promise((resolve) => setTimeout(resolve, delay))
+			await sleep(delay)
 		}
 
+		// The test may end or navigate during the delay; the route is gone then.
 		await route.fulfill({ json: { suggestion: suggest(body) } }).catch(() => {})
-	})
+	}
+
+	await page.route("**/api/predict", answer)
 
 	return requests
 }
@@ -60,6 +70,7 @@ test("accepting goes through onChange and undo restores React state", async ({
 	await reply.press("ControlOrMeta+z")
 	// WebKit may merge the suggestion into the preceding typing run and undo both.
 	const undone = browserName === "webkit" ? ["Hi Anna,", ""] : ["Hi Anna,"]
+
 	await expect.poll(() => reply.inputValue()).not.toContain("thanks")
 	expect(undone).toContain(await reply.inputValue())
 	await expect(page.getByTestId("reply-value")).toHaveText(
@@ -128,16 +139,16 @@ test("the ghost follows textarea and page scroll", async ({ page }) => {
 		node.style.boxSizing = "content-box"
 		node.style.width = "300px"
 	})
-	await reply.fill(
-		Array.from({ length: 30 }, (_, index) => `line ${index}`).join("\n"),
-	)
+	// More lines than the field shows, so that it scrolls.
+	const lines = Array.from({ length: 30 }, (_, index) => `line ${index}`)
+	await reply.fill(lines.join("\n"))
 	await reply.pressSequentially(".")
 	await expect(ghost(page)).toBeVisible()
 
 	const offsets = async () =>
 		page.evaluate(() => {
-			const field = document.querySelector("[data-testid=reply]")!
-			const overlay = document.querySelector("[data-use-prediction]")!
+			const field = document.querySelector("[data-testid=reply]") as Element
+			const overlay = document.querySelector("[data-use-prediction]") as Element
 			const a = field.getBoundingClientRect()
 			const b = overlay.getBoundingClientRect()
 
@@ -228,7 +239,7 @@ test("Ctrl/Cmd+Right accepts one word at a time", async ({ page }) => {
 test("a loading indicator stands at the caret until the answer comes", async ({
 	page,
 }) => {
-	await mockPredictions(page, () => " for Q3", 800)
+	await mockPredictions(page, () => " for Q3", SLOW_ANSWER_MS)
 	await page.goto("/")
 	const subject = page.getByTestId("subject")
 	const indicator = page.locator("[data-use-prediction-loading] > span")
@@ -238,21 +249,27 @@ test("a loading indicator stands at the caret until the answer comes", async ({
 
 	// The indicator starts where the typed text ends.
 	const caretX = await page.evaluate(() => {
-		const before = document.querySelector("[data-use-prediction] span")!
+		const before = document.querySelector("[data-use-prediction] span") as Node
 		const range = document.createRange()
 		range.selectNodeContents(before)
+
 		return range.getBoundingClientRect().right
 	})
-	const box = (await indicator.boundingBox())!
+	const box = await indicator.boundingBox()
+
+	if (!box) {
+		throw new Error("The loading indicator has no box")
+	}
+
 	expect(box.x).toBeGreaterThanOrEqual(caretX)
-	expect(box.x).toBeLessThan(caretX + 20)
+	expect(box.x).toBeLessThan(caretX + CARET_TOLERANCE_PX)
 
 	await expect(ghost(page)).toHaveText("Quarterly report for Q3")
 	await expect(indicator).toHaveCount(0)
 })
 
 test("loadingClassName replaces the built-in indicator", async ({ page }) => {
-	await mockPredictions(page, () => " soon", 800)
+	await mockPredictions(page, () => " soon", SLOW_ANSWER_MS)
 	await page.goto("/")
 
 	await page.getByTestId("reply").pressSequentially("See you")

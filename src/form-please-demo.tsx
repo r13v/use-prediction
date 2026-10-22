@@ -41,6 +41,7 @@ const PredictedTextarea = ({
 				if (predictionsOn) {
 					prediction.ref(node)
 				}
+
 				input.ref(node)
 			}}
 			required={required}

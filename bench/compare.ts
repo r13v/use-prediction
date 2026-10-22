@@ -10,7 +10,7 @@
  */
 import { writeFile } from "node:fs/promises"
 
-import { chromium, type Page } from "@playwright/test"
+import { type Browser, chromium, type Page } from "@playwright/test"
 
 import { type Task, tasks } from "./tasks"
 
@@ -23,6 +23,10 @@ const COMMA_PAUSE_MS = 400
 const SENTENCE_PAUSE_MS = 1200
 // Reading a new suggestion to decide whether it fits.
 const GLANCE_MS = 300
+// The real pause after a key leaves out the time that the key press itself takes.
+const KEY_PRESS_MS = 30
+// A run that takes this many times longer than typing by hand is stuck.
+const STUCK_FACTOR = 5
 
 type Condition = "tab" | "word"
 
@@ -110,6 +114,7 @@ const runTask = async (
 	await field.click()
 
 	const target = task.target
+	const timeoutMs = STUCK_FACTOR * typeByHand(task).ms
 	const started = Date.now()
 	// Modeled time: keys, pauses, and reading. The run is paced in real time so
 	// the model's real latency decides when suggestions arrive.
@@ -124,9 +129,9 @@ const runTask = async (
 	for (;;) {
 		// The overlay is the ghost the user sees; React state follows a moment later.
 		const { value, suggestion, focused } = await page.evaluate(() => {
-			const field = document.querySelector<HTMLTextAreaElement>(
+			const field = document.querySelector(
 				"[data-testid=bench]",
-			)!
+			) as HTMLTextAreaElement
 
 			return {
 				value: field.value,
@@ -137,11 +142,12 @@ const runTask = async (
 			}
 		})
 
-		if (
+		const finished =
 			value.length >= target.length ||
 			!target.startsWith(value) ||
-			Date.now() - started > 5 * typeByHand(task).ms
-		) {
+			Date.now() - started > timeoutMs
+
+		if (finished) {
 			break
 		}
 
@@ -168,6 +174,7 @@ const runTask = async (
 			accepted += 1
 			acceptedChars += suggestion.length
 			lastSeen = ""
+
 			continue
 		}
 
@@ -181,6 +188,7 @@ const runTask = async (
 				ms += count * KEY_MS
 				accepted += 1
 				acceptedChars += prefix.length
+
 				continue
 			}
 		}
@@ -189,7 +197,7 @@ const runTask = async (
 		await page.keyboard.type(char)
 		keystrokes += 1
 		ms += KEY_MS + pauseAfter(char)
-		await sleep(KEY_MS - 30 + pauseAfter(char))
+		await sleep(KEY_MS - KEY_PRESS_MS + pauseAfter(char))
 	}
 
 	const value = await field.inputValue()
@@ -219,36 +227,42 @@ const median = (values: number[]) => {
 	return sorted.length === 0 ? 0 : sorted[Math.floor(sorted.length / 2)]
 }
 
+/** The summary row of one condition against typing by hand, or none when the condition did not run; a list for `flatMap`. */
+const summarizeCondition = (condition: string, results: Result[]) => {
+	const group = results.filter((result) => result.condition === condition)
+
+	if (group.length === 0) {
+		return []
+	}
+
+	const sum = (key: "chars" | "keystrokes" | "ms" | "shown" | "accepted") =>
+		group.reduce((total, result) => total + result[key], 0)
+	const groupTasks = new Set(group.map((result) => result.task))
+	const offMs = results
+		.filter(
+			(result) => result.condition === "off" && groupTasks.has(result.task),
+		)
+		.reduce((total, result) => total + result.ms, 0)
+	const shown = sum("shown")
+	const row = {
+		condition,
+		tasks: group.length,
+		ksr: 1 - sum("keystrokes") / sum("chars"),
+		timeSaved: 1 - sum("ms") / offMs,
+		shown,
+		accepted: sum("accepted"),
+		wasted: shown === 0 ? 0 : 1 - sum("accepted") / shown,
+		medianLatency: median(group.flatMap((result) => result.latencies)),
+		allCorrect: group.every((result) => result.correct),
+	}
+
+	return [row]
+}
+
 const summarize = (results: Result[]) => {
-	const rows = ["off", "tab", "word"].flatMap((condition) => {
-		const group = results.filter((result) => result.condition === condition)
-
-		if (group.length === 0) {
-			return []
-		}
-
-		const sum = (key: "chars" | "keystrokes" | "ms" | "shown" | "accepted") =>
-			group.reduce((total, result) => total + result[key], 0)
-		const offMs = results
-			.filter((result) => result.condition === "off")
-			.filter((result) => group.some((other) => other.task === result.task))
-			.reduce((total, result) => total + result.ms, 0)
-		const shown = sum("shown")
-
-		return [
-			{
-				condition,
-				tasks: group.length,
-				ksr: 1 - sum("keystrokes") / sum("chars"),
-				timeSaved: 1 - sum("ms") / offMs,
-				shown,
-				accepted: sum("accepted"),
-				wasted: shown === 0 ? 0 : 1 - sum("accepted") / shown,
-				medianLatency: median(group.flatMap((result) => result.latencies)),
-				allCorrect: group.every((result) => result.correct),
-			},
-		]
-	})
+	const rows = ["off", "tab", "word"].flatMap((condition) =>
+		summarizeCondition(condition, results),
+	)
 
 	const percent = (value: number) => `${(value * 100).toFixed(1)}%`
 
@@ -260,6 +274,25 @@ const summarize = (results: Result[]) => {
 				`| ${row.condition} | ${row.tasks} | ${percent(row.ksr)} | ${percent(row.timeSaved)} | ${row.shown} | ${row.accepted} | ${percent(row.wasted)} | ${Math.round(row.medianLatency)} ms |${row.allCorrect ? "" : " ⚠ text mismatch"}`,
 		),
 	].join("\n")
+}
+
+const runCondition = async (
+	browser: Browser,
+	condition: Condition,
+	selected: Task[],
+) => {
+	const page = await browser.newPage()
+	const results: Result[] = []
+
+	for (const task of selected) {
+		const result = await runTask(page, task, condition)
+		results.push(result)
+		console.error(
+			`${condition} ${task.id}: ${result.keystrokes}/${result.chars} keys, ${result.accepted}/${result.shown} accepted`,
+		)
+	}
+
+	return results
 }
 
 const main = async () => {
@@ -277,22 +310,12 @@ const main = async () => {
 	)
 
 	const browser = await chromium.launch()
-	const results: Result[] = selected.map(typeByHand)
 
 	// Conditions run side by side; each types its tasks one after another.
-	await Promise.all(
-		conditions.map(async (condition) => {
-			const page = await browser.newPage()
-
-			for (const task of selected) {
-				const result = await runTask(page, task, condition)
-				results.push(result)
-				console.error(
-					`${condition} ${task.id}: ${result.keystrokes}/${result.chars} keys, ${result.accepted}/${result.shown} accepted`,
-				)
-			}
-		}),
+	const runs = await Promise.all(
+		conditions.map((condition) => runCondition(browser, condition, selected)),
 	)
+	const results = [...selected.map(typeByHand), ...runs.flat()]
 
 	await browser.close()
 

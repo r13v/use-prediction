@@ -26,22 +26,17 @@ export default defineConfig(({ mode }) => {
 		process.env[key] ??= value
 	}
 
+	const useReact19 = process.env.REACT_VERSION === "19"
+	const react19Aliases = [
+		{ find: /^react$/, replacement: react19("react") },
+		{ find: /^react\/(.*)$/, replacement: `${react19("react")}/$1` },
+		{ find: /^react-dom$/, replacement: react19("react-dom") },
+		{ find: /^react-dom\/(.*)$/, replacement: `${react19("react-dom")}/$1` },
+	]
+
 	return {
 		plugins: [react(), predictionApi()],
-		resolve:
-			process.env.REACT_VERSION === "19"
-				? {
-						alias: [
-							{ find: /^react$/, replacement: react19("react") },
-							{ find: /^react\/(.*)$/, replacement: `${react19("react")}/$1` },
-							{ find: /^react-dom$/, replacement: react19("react-dom") },
-							{
-								find: /^react-dom\/(.*)$/,
-								replacement: `${react19("react-dom")}/$1`,
-							},
-						],
-					}
-				: undefined,
+		resolve: useReact19 ? { alias: react19Aliases } : undefined,
 		// Each React version keeps its own pre-bundled dependencies.
 		cacheDir: `node_modules/.vite-react-${process.env.REACT_VERSION ?? "18"}`,
 	}

@@ -33,6 +33,7 @@ export const usePrediction = (options: PredictionOptions) => {
 	const [controller] = useState(
 		() => new PredictionController(() => optionsRef.current),
 	)
+
 	// A render can change a controlled value without an input event, for
 	// example a form reset; a ghost for the old text must go.
 	useIsomorphicLayoutEffect(() => {

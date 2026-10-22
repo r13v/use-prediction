@@ -71,6 +71,10 @@ export interface PredictionState {
 const IDLE: PredictionState = { status: "idle", suggestion: "" }
 const LOADING: PredictionState = { status: "loading", suggestion: "" }
 
+const DEFAULT_DEBOUNCE_MS = 300
+// The key code of a keydown that an IME takes, in browsers without `isComposing`.
+const IME_KEY_CODE = 229
+
 /**
  * Connects one field to a prediction source: requests suggestions while the
  * user types, shows them as ghost text, and inserts them on Tab.
@@ -121,10 +125,10 @@ export class PredictionController {
 
 		this.detach()
 
-		if (
-			node instanceof HTMLInputElement ||
-			node instanceof HTMLTextAreaElement
-		) {
+		const isTextField =
+			node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement
+
+		if (isTextField) {
 			this.attach(node)
 		}
 	}
@@ -150,6 +154,7 @@ export class PredictionController {
 
 		if (!sameCaret(readCaret(field), ghost)) {
 			this.reset()
+
 			return false
 		}
 
@@ -236,13 +241,14 @@ export class PredictionController {
 
 		this.expected = caret
 
-		if (caret && this.ghost && this.continuesGhost(caret)) {
+		if (caret && this.ghost && this.continuesGhost(field, this.ghost, caret)) {
 			return
 		}
 
 		if (caret && this.loading && typedSince(this.loading, caret) !== null) {
 			// Typing on at the caret: the answer in flight may still fit.
 			this.overlay?.moveLoading(caret)
+
 			return
 		}
 
@@ -256,24 +262,23 @@ export class PredictionController {
 	private readonly onKeyDown = (keyboardEvent: Event) => {
 		const event = keyboardEvent as KeyboardEvent
 
-		if (event.isComposing || event.keyCode === 229) {
+		if (event.isComposing || event.keyCode === IME_KEY_CODE) {
 			return
 		}
 
 		const modified =
 			event.shiftKey || event.altKey || event.ctrlKey || event.metaKey
+		const wordKey =
+			event.key === "ArrowRight" &&
+			(event.metaKey || event.ctrlKey) &&
+			!event.altKey &&
+			!event.shiftKey
 
 		if (event.key === "Tab" && !modified && this.ghost) {
 			if (this.accept()) {
 				event.preventDefault()
 			}
-		} else if (
-			event.key === "ArrowRight" &&
-			(event.metaKey || event.ctrlKey) &&
-			!event.altKey &&
-			!event.shiftKey &&
-			this.ghost
-		) {
+		} else if (wordKey && this.ghost) {
 			if (this.acceptWord()) {
 				event.preventDefault()
 			}
@@ -302,9 +307,13 @@ export class PredictionController {
 	 * changed without typing: a click, an arrow key, or a value set by code.
 	 */
 	readonly checkCaret = () => {
-		const field = this.field
+		const { field, expected } = this
+		const caretMoved =
+			expected !== null &&
+			field !== null &&
+			!sameCaret(readCaret(field), expected)
 
-		if (this.expected && field && !sameCaret(readCaret(field), this.expected)) {
+		if (caretMoved) {
 			this.reset()
 		}
 	}
@@ -318,19 +327,19 @@ export class PredictionController {
 	 * a new request. Anything else, such as a deletion or an edit after the
 	 * caret, ends the ghost.
 	 */
-	private continuesGhost(caret: Caret) {
-		const ghost = this.ghost!
+	private continuesGhost(field: Field, ghost: GhostText, caret: Caret) {
 		const typed = typedSince(ghost, caret)
+		const typedPartOfGhost =
+			typed !== null &&
+			typed !== "" &&
+			typed.length < ghost.text.length &&
+			ghost.text.startsWith(typed)
 
-		if (
-			!typed ||
-			typed.length >= ghost.text.length ||
-			!ghost.text.startsWith(typed)
-		) {
+		if (!typedPartOfGhost) {
 			return false
 		}
 
-		this.show({
+		this.show(field, {
 			before: caret.before,
 			text: ghost.text.slice(typed.length),
 			after: caret.after,
@@ -345,7 +354,7 @@ export class PredictionController {
 		}
 
 		const generation = this.generation
-		const { debounce = 300 } = this.options()
+		const { debounce = DEFAULT_DEBOUNCE_MS } = this.options()
 		this.expected = caret
 
 		this.timer = setTimeout(() => {
@@ -365,21 +374,21 @@ export class PredictionController {
 			this.overlay?.showLoading(field, caret, loadingClassName)
 		}
 
+		const { before, after } = caret
 		let text: string
 
 		try {
 			text = await this.options().get({
-				text: caret.before + caret.after,
-				before: caret.before,
-				after: caret.after,
+				text: before + after,
+				before,
+				after,
 				signal: request.signal,
 			})
 		} catch (error) {
 			if (generation === this.generation) {
 				this.request = null
 				this.loading = null
-				this.overlay?.hide()
-				this.setState(IDLE)
+				this.idle()
 			}
 
 			if (!request.signal.aborted) {
@@ -397,33 +406,47 @@ export class PredictionController {
 		this.request = null
 		this.loading = null
 
-		const now =
-			this.field === field && isFocused(field) ? readCaret(field) : null
+		const stillFocused = this.field === field && isFocused(field)
+		const now = stillFocused ? readCaret(field) : null
+
+		if (!now) {
+			this.idle()
+
+			return
+		}
+
 		// Characters typed while the request was in flight.
-		const typed = now && typedSince(caret, now)
-		const suggestion =
-			now && typed !== null && text.startsWith(typed)
-				? fitToField(field, text.slice(typed.length))
-				: ""
+		const typed = typedSince(caret, now)
+		const answerFits = typed !== null && text.startsWith(typed)
+		const suggestion = answerFits
+			? fitToField(field, text.slice(typed.length))
+			: ""
 
 		if (suggestion) {
-			this.show({ ...now!, text: suggestion })
-		} else {
-			this.overlay?.hide()
-			this.setState(IDLE)
+			this.show(field, { ...now, text: suggestion })
 
-			if (now && typed) {
-				// The user typed past this answer; ask about the current text.
-				this.schedule(field, now)
-			}
+			return
+		}
+
+		this.idle()
+
+		if (typed) {
+			// The user typed past this answer; ask about the current text.
+			this.schedule(field, now)
 		}
 	}
 
-	private show(ghost: GhostText) {
+	private show(field: Field, ghost: GhostText) {
 		this.ghost = ghost
 		this.expected = ghost
-		this.overlay?.show(this.field!, ghost, this.options().className)
+		this.overlay?.show(field, ghost, this.options().className)
 		this.setState({ status: "ready", suggestion: ghost.text })
+	}
+
+	/** Hides the loading indicator after a request ends without a suggestion. */
+	private idle() {
+		this.overlay?.hide()
+		this.setState(IDLE)
 	}
 
 	/** Drops the ghost, the pending timer, and the request in flight. */
@@ -466,10 +489,12 @@ const reportFailure = (error: unknown) => {
 }
 
 /** The text typed at the caret since `from`, or null after any other edit. */
-const typedSince = (from: Caret, to: Caret) =>
-	to.after === from.after && to.before.startsWith(from.before)
-		? to.before.slice(from.before.length)
-		: null
+const typedSince = (from: Caret, to: Caret) => {
+	const typedAtCaret =
+		to.after === from.after && to.before.startsWith(from.before)
+
+	return typedAtCaret ? to.before.slice(from.before.length) : null
+}
 
 /** Keeps a suggestion within what the field can hold. */
 const fitToField = (field: Field, text: string) => {
@@ -480,7 +505,8 @@ const fitToField = (field: Field, text: string) => {
 	}
 
 	if (field.maxLength >= 0) {
-		result = result.slice(0, Math.max(0, field.maxLength - field.value.length))
+		const room = Math.max(0, field.maxLength - field.value.length)
+		result = result.slice(0, room)
 	}
 
 	return result

@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { PredictionController, type PredictionOptions } from "./controller"
 
+// The default debounce of the controller.
+const DEBOUNCE_MS = 300
+
 const deferred = () => {
 	let resolve!: (value: string) => void
 	const promise = new Promise<string>((done) => {
@@ -13,8 +16,11 @@ const deferred = () => {
 
 const type = (field: HTMLInputElement | HTMLTextAreaElement, text: string) => {
 	const caret = field.selectionStart ?? field.value.length
-	field.value = field.value.slice(0, caret) + text + field.value.slice(caret)
-	field.setSelectionRange(caret + text.length, caret + text.length)
+	const { value } = field
+	const caretAfter = caret + text.length
+
+	field.value = value.slice(0, caret) + text + value.slice(caret)
+	field.setSelectionRange(caretAfter, caretAfter)
 	field.dispatchEvent(
 		new InputEvent("input", {
 			bubbles: true,
@@ -66,7 +72,7 @@ describe("PredictionController", () => {
 		const { controller, field, get } = setup()
 
 		type(field, "hello")
-		await vi.advanceTimersByTimeAsync(299)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS - 1)
 		expect(get).not.toHaveBeenCalled()
 
 		await vi.advanceTimersByTimeAsync(1)
@@ -86,7 +92,7 @@ describe("PredictionController", () => {
 		})
 
 		type(field, "<b>hi</b>")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
 		expect(ghost()?.querySelector("img, b")).toBeNull()
 		expect(ghost()?.textContent).toBe('<b>hi</b><img src=x onerror="alert(1)">')
@@ -98,7 +104,7 @@ describe("PredictionController", () => {
 		get.mockImplementationOnce(() => response.promise)
 
 		type(field, "hel")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 		const { signal } = get.mock.calls[0][0]
 		field.value = "he"
 		field.dispatchEvent(
@@ -126,7 +132,7 @@ describe("PredictionController", () => {
 			field.setSelectionRange(5, 5)
 			document.dispatchEvent(new Event("selectionchange"))
 			response.resolve(" world")
-			await vi.advanceTimersByTimeAsync(300)
+			await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
 			expect(ghost()).toBeNull()
 
@@ -144,13 +150,13 @@ describe("PredictionController", () => {
 		get.mockRejectedValueOnce(new Error("HTTP 502"))
 
 		type(field, "hello")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
 		expect(onError).toHaveBeenCalledWith(new Error("HTTP 502"))
 		expect(controller.getSnapshot().status).toBe("idle")
 
 		type(field, "!")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 		expect(controller.getSnapshot().suggestion).toBe(" world")
 	})
 
@@ -160,7 +166,7 @@ describe("PredictionController", () => {
 		get.mockImplementationOnce(() => response.promise)
 
 		type(field, "hel")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 		type(field, "l")
 		response.resolve("lo there")
 		await vi.advanceTimersByTimeAsync(1)
@@ -176,10 +182,10 @@ describe("PredictionController", () => {
 		get.mockImplementationOnce(() => response.promise)
 
 		type(field, "hel")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 		type(field, "p")
 		response.resolve("lo")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
 		expect(ghost()?.textContent).toBe("help world")
 		expect(get).toHaveBeenLastCalledWith(
@@ -193,7 +199,7 @@ describe("PredictionController", () => {
 		get.mockImplementationOnce(() => response.promise)
 
 		type(field, "hello")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
 		if (action === "blur") {
 			field.blur()
@@ -211,7 +217,7 @@ describe("PredictionController", () => {
 		const { controller, field, get } = setup()
 
 		type(field, "hello")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 		type(field, " wo")
 		await vi.advanceTimersByTimeAsync(1000)
 
@@ -224,11 +230,11 @@ describe("PredictionController", () => {
 		const { controller, field, get } = setup()
 
 		type(field, "hello")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 		type(field, "!")
 
 		expect(controller.getSnapshot().suggestion).toBe("")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 		expect(get).toHaveBeenCalledTimes(2)
 	})
 
@@ -237,7 +243,7 @@ describe("PredictionController", () => {
 		const onInput = vi.fn()
 
 		type(field, "hello")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 		field.addEventListener("input", onInput)
 		const tab = press(field, "Tab")
 
@@ -253,7 +259,7 @@ describe("PredictionController", () => {
 		get.mockResolvedValue(" big wide world")
 
 		type(field, "hello")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 		const event = new KeyboardEvent("keydown", {
 			key: "ArrowRight",
 			ctrlKey: true,
@@ -273,7 +279,7 @@ describe("PredictionController", () => {
 		expect(press(field, "Tab").defaultPrevented).toBe(false)
 
 		type(field, "hello")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 		const shiftTab = new KeyboardEvent("keydown", {
 			key: "Tab",
 			shiftKey: true,
@@ -288,7 +294,7 @@ describe("PredictionController", () => {
 		const { field } = setup()
 
 		type(field, "hello")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
 		expect(press(field, "Escape").defaultPrevented).toBe(true)
 		expect(ghost()).toBeNull()
@@ -303,7 +309,7 @@ describe("PredictionController", () => {
 		field.value = "a world"
 		field.setSelectionRange(1, 1)
 		type(field, "")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
 		expect(ghost()?.textContent).toBe("a big world")
 		expect(field.style.getPropertyValue("-webkit-text-fill-color")).toBe(
@@ -324,7 +330,7 @@ describe("PredictionController", () => {
 			get.mockImplementationOnce(() => response.promise)
 
 			type(field, "hello")
-			await vi.advanceTimersByTimeAsync(300)
+			await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
 			expect(indicator()).not.toBeNull()
 			expect(ghost()?.textContent).toBe("hello")
@@ -344,7 +350,7 @@ describe("PredictionController", () => {
 			const { controller, field } = setup({ get, onError: () => {} })
 
 			type(field, "hello")
-			await vi.advanceTimersByTimeAsync(300)
+			await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
 			expect(indicator()).toBeNull()
 			expect(ghost()).toBeNull()
@@ -356,7 +362,7 @@ describe("PredictionController", () => {
 			get.mockImplementationOnce(() => deferred().promise)
 
 			type(field, "hello")
-			await vi.advanceTimersByTimeAsync(300)
+			await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 			press(field, "Escape")
 
 			expect(indicator()).toBeNull()
@@ -368,7 +374,7 @@ describe("PredictionController", () => {
 			get.mockImplementationOnce(() => deferred().promise)
 
 			type(field, "hello")
-			await vi.advanceTimersByTimeAsync(300)
+			await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 			type(field, " wor")
 
 			expect(get).toHaveBeenCalledTimes(1)
@@ -383,7 +389,7 @@ describe("PredictionController", () => {
 			field.value = "a world"
 			field.setSelectionRange(1, 1)
 			type(field, "")
-			await vi.advanceTimersByTimeAsync(300)
+			await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
 			expect(controller.getSnapshot().status).toBe("loading")
 			expect(indicator()?.dataset.usePredictionLoading).toBe("middle")
@@ -394,7 +400,7 @@ describe("PredictionController", () => {
 			field.value = "a  \nworld"
 			field.setSelectionRange(1, 1)
 			type(field, "")
-			await vi.advanceTimersByTimeAsync(300)
+			await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
 			expect(indicator()?.dataset.usePredictionLoading).toBe("end")
 		})
@@ -404,7 +410,7 @@ describe("PredictionController", () => {
 			get.mockImplementationOnce(() => deferred().promise)
 
 			type(field, "hello")
-			await vi.advanceTimersByTimeAsync(300)
+			await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
 			expect(controller.getSnapshot().status).toBe("loading")
 			expect(ghost()).toBeNull()
@@ -415,7 +421,7 @@ describe("PredictionController", () => {
 			get.mockImplementationOnce(() => deferred().promise)
 
 			type(field, "hello")
-			await vi.advanceTimersByTimeAsync(300)
+			await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 			const bar = indicator()?.firstElementChild as HTMLElement
 
 			expect(bar.className).toBe("spinner")
@@ -429,12 +435,12 @@ describe("PredictionController", () => {
 		const { controller } = setup({ get: async () => " there\nfriend" }, input)
 
 		type(input, "hi")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
 		expect(controller.getSnapshot().suggestion).toBe(" there")
 
 		type(input, "!!")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 		expect(controller.getSnapshot().suggestion).toBe(" the")
 	})
 
@@ -447,7 +453,7 @@ describe("PredictionController", () => {
 
 			input.value = "secret"
 			input.dispatchEvent(new InputEvent("input", { bubbles: true }))
-			await vi.advanceTimersByTimeAsync(300)
+			await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
 			expect(get).not.toHaveBeenCalled()
 		},
@@ -460,11 +466,11 @@ describe("PredictionController", () => {
 		field.setSelectionRange(2, 2)
 		field.dispatchEvent(new CompositionEvent("compositionstart"))
 		field.dispatchEvent(new InputEvent("input", { isComposing: true }))
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 		expect(get).not.toHaveBeenCalled()
 
 		field.dispatchEvent(new CompositionEvent("compositionend"))
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 		expect(get).toHaveBeenCalledTimes(1)
 	})
 
@@ -473,9 +479,9 @@ describe("PredictionController", () => {
 
 		type(field, "hello")
 		controller.ref(null)
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 		type(field, "!")
-		await vi.advanceTimersByTimeAsync(300)
+		await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
 
 		expect(get).not.toHaveBeenCalled()
 	})

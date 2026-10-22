@@ -10,6 +10,15 @@ const execFileAsync = promisify(execFile)
 const expectedPackageName = "use-prediction"
 const expectedRepositoryUrl = "https://github.com/r13v/use-prediction"
 const expectedGitHubRepository = "r13v/use-prediction"
+const REGISTRY_TIMEOUT_MS = 15_000
+const MAX_NPM_OUTPUT_BYTES = 1024 * 1024
+const STABLE_VERSION = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/u
+const AUTHENTICATION_ERROR =
+	/\b(?:E401|E403|ENEEDAUTH)\b|authenticat|unauthorized|forbidden/i
+const OUTAGE_ERROR =
+	/\b(?:E5\d{2}|ETIMEDOUT|ECONNRESET|ENOTFOUND|EAI_AGAIN)\b|service unavailable|socket hang up/i
+const NOT_FOUND_ERROR = /\bE404\b|404|not found|not in this registry/i
+const TIMEOUT_ERROR = /timed out|timeout/i
 
 export class ReleaseGuardError extends Error {
 	constructor(code, message) {
@@ -27,6 +36,7 @@ export async function verifyRelease({
 	lookupVersion = defaultRegistryLookup,
 }) {
 	const packageName = readString(packageJson.name, "package.json name")
+
 	if (packageName !== expectedPackageName) {
 		throwReleaseError(
 			"package_name_mismatch",
@@ -42,12 +52,14 @@ export async function verifyRelease({
 	assertGitHubRepository(githubRepository)
 
 	const registryResult = await lookupVersion({ packageName, version })
+
 	if (registryResult.status === "published") {
 		throwReleaseError(
 			"version_already_published",
 			`${packageName}@${version} is already published on npm`,
 		)
 	}
+
 	if (registryResult.status !== "available") {
 		throwReleaseError(
 			"registry_lookup_failed",
@@ -66,18 +78,19 @@ export async function verifyRelease({
 export async function defaultRegistryLookup({
 	packageName,
 	version,
-	timeoutMs = 15_000,
+	timeoutMs = REGISTRY_TIMEOUT_MS,
 }) {
 	try {
 		const { stdout, stderr } = await execFileAsync(
 			"npm",
 			["view", `${packageName}@${version}`, "version", "--json"],
 			{
-				maxBuffer: 1024 * 1024,
+				maxBuffer: MAX_NPM_OUTPUT_BYTES,
 				timeout: timeoutMs,
 				windowsHide: true,
 			},
 		)
+
 		return classifyNpmViewResult({
 			expectedVersion: version,
 			stdout,
@@ -110,56 +123,19 @@ export function classifyNpmViewResult({
 	}
 
 	if (error !== undefined) {
-		if (isVersionNotFound(detail, expectedVersion)) {
-			return {
-				status: "available",
-				reason: "version_not_found",
-			}
-		}
-		if (
-			/\b(?:E401|E403|ENEEDAUTH)\b|authenticat|unauthorized|forbidden/i.test(
-				detail,
-			)
-		) {
-			return {
-				status: "error",
-				reason: "authentication",
-				detail,
-			}
-		}
-		if (
-			/\b(?:E5\d{2}|ETIMEDOUT|ECONNRESET|ENOTFOUND|EAI_AGAIN)\b|service unavailable|socket hang up/i.test(
-				detail,
-			)
-		) {
-			return {
-				status: "error",
-				reason: "registry_outage",
-				detail,
-			}
-		}
-		if (/\bE404\b|404|not found|not in this registry/i.test(detail)) {
-			return {
-				status: "error",
-				reason: "package_not_found",
-				detail,
-			}
-		}
-		return {
-			status: "error",
-			reason: "registry_error",
-			detail,
-		}
+		return classifyNpmViewError(detail, expectedVersion)
 	}
 
 	try {
 		const parsed = JSON.parse(stdout.trim())
+
 		if (parsed === expectedVersion) {
 			return {
 				status: "published",
 				version: parsed,
 			}
 		}
+
 		if (typeof parsed === "string") {
 			return {
 				status: "error",
@@ -167,6 +143,7 @@ export function classifyNpmViewResult({
 				detail: parsed,
 			}
 		}
+
 		return {
 			status: "error",
 			reason: "malformed_response",
@@ -181,30 +158,61 @@ export function classifyNpmViewResult({
 	}
 }
 
-export function normalizeRepositoryUrl(repository) {
-	let raw
-	if (typeof repository === "string") {
-		raw = repository
-	} else if (typeof repository?.url === "string") {
-		raw = repository.url
+/** A failed `npm view`: an unpublished version is the only good outcome. */
+function classifyNpmViewError(detail, expectedVersion) {
+	if (isVersionNotFound(detail, expectedVersion)) {
+		return {
+			status: "available",
+			reason: "version_not_found",
+		}
 	}
-	if (raw === undefined) {
+
+	if (AUTHENTICATION_ERROR.test(detail)) {
+		return {
+			status: "error",
+			reason: "authentication",
+			detail,
+		}
+	}
+
+	if (OUTAGE_ERROR.test(detail)) {
+		return {
+			status: "error",
+			reason: "registry_outage",
+			detail,
+		}
+	}
+
+	if (NOT_FOUND_ERROR.test(detail)) {
+		return {
+			status: "error",
+			reason: "package_not_found",
+			detail,
+		}
+	}
+
+	return {
+		status: "error",
+		reason: "registry_error",
+		detail,
+	}
+}
+
+export function normalizeRepositoryUrl(repository) {
+	const raw = typeof repository === "string" ? repository : repository?.url
+
+	if (typeof raw !== "string") {
 		return undefined
 	}
 
-	let normalized = raw.trim()
-	normalized = normalized.replace(/^git\+/, "")
-	normalized = normalized.replace(/^git@github\.com:/i, "https://github.com/")
-	normalized = normalized.replace(
-		/^ssh:\/\/git@github\.com\//i,
-		"https://github.com/",
-	)
-	normalized = normalized.replace(
-		/^git:\/\/github\.com\//i,
-		"https://github.com/",
-	)
-	normalized = normalized.replace(/\.git(?:[#?].*)?$/i, "")
-	normalized = normalized.replace(/\/$/u, "")
+	const normalized = raw
+		.trim()
+		.replace(/^git\+/, "")
+		.replace(/^git@github\.com:/i, "https://github.com/")
+		.replace(/^ssh:\/\/git@github\.com\//i, "https://github.com/")
+		.replace(/^git:\/\/github\.com\//i, "https://github.com/")
+		.replace(/\.git(?:[#?].*)?$/i, "")
+		.replace(/\/$/u, "")
 
 	return normalized.toLowerCase()
 }
@@ -235,7 +243,8 @@ function assertStableVersion(version) {
 	if (version === "0.0.0") {
 		throwReleaseError("zero_version", "0.0.0 cannot be published")
 	}
-	if (!/^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/u.test(version)) {
+
+	if (!STABLE_VERSION.test(version)) {
 		throwReleaseError(
 			"unstable_version",
 			`release version must be a stable x.y.z version, got ${version}`,
@@ -253,6 +262,7 @@ function assertLockfileVersion(packageLock, version) {
 		rootPackage?.version,
 		"package-lock.json root package version",
 	)
+
 	if (lockVersion !== version || rootVersion !== version) {
 		throwReleaseError(
 			"lockfile_version_mismatch",
@@ -263,6 +273,7 @@ function assertLockfileVersion(packageLock, version) {
 
 function assertReleaseTag(eventTag, version) {
 	const expectedTag = `v${version}`
+
 	if (eventTag !== expectedTag) {
 		throwReleaseError(
 			"tag_mismatch",
@@ -273,6 +284,7 @@ function assertReleaseTag(eventTag, version) {
 
 function assertRepository(repository) {
 	const repositoryUrl = normalizeRepositoryUrl(repository)
+
 	if (repositoryUrl !== expectedRepositoryUrl) {
 		throwReleaseError(
 			"repository_mismatch",
@@ -282,10 +294,11 @@ function assertRepository(repository) {
 }
 
 function assertGitHubRepository(githubRepository) {
-	if (
+	const otherRepository =
 		githubRepository !== undefined &&
 		githubRepository.toLowerCase() !== expectedGitHubRepository
-	) {
+
+	if (otherRepository) {
 		throwReleaseError(
 			"github_repository_mismatch",
 			`GitHub repository must be ${expectedGitHubRepository}, got ${githubRepository}`,
@@ -297,18 +310,14 @@ function readString(value, label) {
 	if (typeof value !== "string" || value.length === 0) {
 		throwReleaseError("invalid_metadata", `${label} must be a non-empty string`)
 	}
+
 	return value
 }
 
 function collectLookupDetail(error, stdout, stderr) {
-	return [
-		stdout,
-		stderr,
-		typeof error?.message === "string" ? error.message : "",
-	]
-		.filter(Boolean)
-		.join("\n")
-		.trim()
+	const message = typeof error?.message === "string" ? error.message : ""
+
+	return [stdout, stderr, message].filter(Boolean).join("\n").trim()
 }
 
 function isVersionNotFound(detail, expectedVersion) {
@@ -323,7 +332,7 @@ function isTimeoutError(error, detail) {
 		error?.killed === true ||
 		error?.signal === "SIGTERM" ||
 		error?.code === "ETIMEDOUT" ||
-		/timed out|timeout/i.test(detail)
+		TIMEOUT_ERROR.test(detail)
 	)
 }
 
@@ -332,7 +341,9 @@ function throwReleaseError(code, message) {
 }
 
 async function readJsonFile(url) {
-	return JSON.parse(await readFile(url, "utf8"))
+	const text = await readFile(url, "utf8")
+
+	return JSON.parse(text)
 }
 
 function isMainModule() {
@@ -353,6 +364,7 @@ if (isMainModule()) {
 		} else {
 			console.error(error)
 		}
+
 		process.exitCode = 1
 	}
 }

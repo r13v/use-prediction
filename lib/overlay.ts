@@ -38,6 +38,11 @@ const COPIED_PROPERTIES = [
 ]
 
 const TEXT_FILL = "-webkit-text-fill-color"
+// Above any page content: the largest 32-bit z-index.
+const TOP_Z_INDEX = "2147483647"
+const GHOST_OPACITY = "0.45"
+const FADE_IN_MS = 150
+const SWEEP_MS = 1150
 
 export interface GhostText {
 	before: string
@@ -106,7 +111,7 @@ export class Overlay {
 			this.ghostSpan.style.removeProperty("opacity")
 		} else {
 			this.ghostSpan.removeAttribute("class")
-			this.ghostSpan.style.opacity = "0.45"
+			this.ghostSpan.style.opacity = GHOST_OPACITY
 		}
 
 		this.mount(field)
@@ -196,24 +201,24 @@ export class Overlay {
 	// The Web Animations API needs no stylesheet, so the page's CSP and CSS stay untouched.
 	private animateLoading() {
 		const bar = this.loadingBar
+		const canAnimate =
+			typeof bar.animate === "function" &&
+			!window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
-		if (
-			typeof bar.animate !== "function" ||
-			window.matchMedia("(prefers-reduced-motion: reduce)").matches
-		) {
+		if (!canAnimate) {
 			return
 		}
 
-		this.animations = [
-			bar.animate([{ opacity: 0 }, { opacity: 1 }], {
-				duration: 150,
-				easing: "ease-out",
-			}),
-			bar.animate(
-				[{ backgroundPosition: "-100% 0" }, { backgroundPosition: "200% 0" }],
-				{ duration: 1150, easing: "ease-in-out", iterations: Infinity },
-			),
-		]
+		const fadeIn = bar.animate([{ opacity: 0 }, { opacity: 1 }], {
+			duration: FADE_IN_MS,
+			easing: "ease-out",
+		})
+		const sweep = bar.animate(
+			[{ backgroundPosition: "-100% 0" }, { backgroundPosition: "200% 0" }],
+			{ duration: SWEEP_MS, easing: "ease-in-out", iterations: Infinity },
+		)
+
+		this.animations = [fadeIn, sweep]
 	}
 
 	private stopLoading() {
@@ -257,7 +262,7 @@ export class Overlay {
 		// The size comes from the field's border box, whatever its box-sizing.
 		style.boxSizing = "border-box"
 		style.position = "fixed"
-		style.zIndex = "2147483647"
+		style.zIndex = TOP_Z_INDEX
 		style.margin = "0"
 		style.overflow = "hidden"
 		style.pointerEvents = "none"
@@ -287,6 +292,7 @@ export class Overlay {
 		}
 
 		const textColor = hidden ? "" : "transparent"
+
 		this.beforeSpan.style.color = textColor
 		this.beforeSpan.style.setProperty(TEXT_FILL, textColor)
 		this.afterSpan.style.color = textColor
