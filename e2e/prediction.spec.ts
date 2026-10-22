@@ -7,8 +7,8 @@ interface Body {
 
 // Slow enough to see the loading indicator before the answer arrives.
 const SLOW_ANSWER_MS = 800
-// About one character: how far the loading indicator may stand from the caret.
-const CARET_TOLERANCE_PX = 20
+// Browsers round layout positions differently, below a pixel.
+const CARET_TOLERANCE_PX = 1
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -261,8 +261,7 @@ test("a loading indicator stands at the caret until the answer comes", async ({
 		throw new Error("The loading indicator has no box")
 	}
 
-	expect(box.x).toBeGreaterThanOrEqual(caretX)
-	expect(box.x).toBeLessThan(caretX + CARET_TOLERANCE_PX)
+	expect(Math.abs(box.x - caretX)).toBeLessThan(CARET_TOLERANCE_PX)
 
 	await expect(ghost(page)).toHaveText("Quarterly report for Q3")
 	await expect(indicator).toHaveCount(0)
