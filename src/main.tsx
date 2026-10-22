@@ -1,10 +1,12 @@
+import "./stand.css"
+
 import React from "react"
 import ReactDOM from "react-dom/client"
 
-import { Example } from "./example"
+import { Stand } from "./stand"
 
 ReactDOM.createRoot(document.querySelector("#root")!).render(
   <React.StrictMode>
-    <Example />
+    <Stand />
   </React.StrictMode>,
 )

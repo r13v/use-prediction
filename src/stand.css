@@ -1,0 +1,43 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  line-height: 1.4;
+}
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+section {
+  margin-block: 24px;
+}
+
+input,
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  border: 1px solid #8884;
+  border-radius: 6px;
+}
+
+.ghost {
+  color: #2f7de1;
+  opacity: 0.6;
+}
+
+.hint {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 28px;
+  font-size: 13px;
+  color: #888;
+}
+
+pre {
+  white-space: pre-wrap;
+}

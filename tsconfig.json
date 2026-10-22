@@ -20,5 +20,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "lib", "*.config.ts"]
+  "include": ["src", "lib", "examples", "e2e", "bench", "*.config.ts"]
 }

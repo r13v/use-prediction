@@ -1,9 +1,49 @@
-import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import { fileURLToPath } from "node:url"
 
-// Dev server for the example app only; the library is built with tsdown.
-// https://vitejs.dev/config/
+import react from "@vitejs/plugin-react"
+import { defineConfig, loadEnv, Plugin } from "vite"
+
+import { handlePrediction } from "./examples/server"
+
+// Dev server for the stand only; the library is built with tsdown.
+// REACT_VERSION=19 runs the stand on the React 19 copy in test/react-19.
+const react19 = (name: string) =>
+  fileURLToPath(new URL(`test/react-19/node_modules/${name}`, import.meta.url))
+
+const predictionApi = (): Plugin => ({
+  name: "prediction-api",
+  configureServer(server) {
+    server.middlewares.use("/api/predict", (req, res) => {
+      void handlePrediction(req, res)
+    })
+  },
+})
+
 // eslint-disable-next-line import/no-default-export
-export default defineConfig({
-  plugins: [react()],
+export default defineConfig(({ mode }) => {
+  for (const [key, value] of Object.entries(
+    loadEnv(mode, process.cwd(), "LLM_"),
+  )) {
+    process.env[key] ??= value
+  }
+
+  return {
+    plugins: [react(), predictionApi()],
+    resolve:
+      process.env.REACT_VERSION === "19"
+        ? {
+            alias: [
+              { find: /^react$/, replacement: react19("react") },
+              { find: /^react\/(.*)$/, replacement: `${react19("react")}/$1` },
+              { find: /^react-dom$/, replacement: react19("react-dom") },
+              {
+                find: /^react-dom\/(.*)$/,
+                replacement: `${react19("react-dom")}/$1`,
+              },
+            ],
+          }
+        : undefined,
+    // Each React version keeps its own pre-bundled dependencies.
+    cacheDir: `node_modules/.vite-react-${process.env.REACT_VERSION ?? "18"}`,
+  }
 })
