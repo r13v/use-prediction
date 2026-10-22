@@ -1,16 +1,11 @@
 {
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "noEmit": false,
-    "declaration": true,
-    "declarationMap": true,
-    "rootDir": "lib"
-  },
-  "include": [
-    "lib"
-  ],
-  "exclude": [
-    "lib/**/*.test.ts",
-    "lib/**/*.test.tsx"
-  ]
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noEmit": false,
+		"declaration": true,
+		"declarationMap": true,
+		"rootDir": "lib"
+	},
+	"include": ["lib"],
+	"exclude": ["lib/**/*.test.ts", "lib/**/*.test.tsx"]
 }

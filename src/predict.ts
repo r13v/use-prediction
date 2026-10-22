@@ -6,20 +6,20 @@ export const predictionsOn = params.get("predict") !== "off"
 
 /** Calls the example server (examples/server.ts); `context` tells the model what the field is for. */
 export const predictFor =
-  (context: string): PredictionFn =>
-  async ({ before, after, signal }) => {
-    const response = await fetch("/api/predict", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ before, after, context }),
-      signal,
-    })
+	(context: string): PredictionFn =>
+	async ({ before, after, signal }) => {
+		const response = await fetch("/api/predict", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ before, after, context }),
+			signal,
+		})
 
-    if (!response.ok) {
-      throw new Error(`Prediction failed: ${response.status}`)
-    }
+		if (!response.ok) {
+			throw new Error(`Prediction failed: ${response.status}`)
+		}
 
-    const data = (await response.json()) as { suggestion: string }
+		const data = (await response.json()) as { suggestion: string }
 
-    return data.suggestion
-  }
+		return data.suggestion
+	}

@@ -1,0 +1,14 @@
+pre-commit:
+  parallel: true
+  commands:
+    check:
+      glob: "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc,css,html}"
+      run: npx @biomejs/biome check --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+
+    knip:
+      run: npm run knip
+
+    # Biome and Knip do not check TypeScript types.
+    typecheck:
+      glob: "*.{ts,tsx,mts,cts}"
+      run: npm run typecheck

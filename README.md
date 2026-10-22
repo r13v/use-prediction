@@ -49,7 +49,7 @@ API key on the server. For a complete server with the OpenAI SDK, see
 
 | Action | Result |
 | --- | --- |
-| The user stops typing for `debounce` ms | The hook calls `get` with the text before and after the caret. |
+| The user stops typing for `debounce` ms | The hook calls `get` with the text before and after the caret. A loading indicator appears at the caret until the response arrives. |
 | The user types the first characters of the suggestion | The suggestion gets shorter. There is no new request. |
 | The user keeps typing at the caret while a request is in progress | The hook waits for the response and shows the part that the user did not type yet. |
 | Cmd+→ (macOS) or Ctrl+→ | Inserts the next word of the suggestion. The rest stays visible. |
@@ -77,6 +77,10 @@ const prediction = usePrediction({
   debounce: 300,
   // Class name of the ghost text. Default: the field's text color at 45% opacity.
   className: "my-ghost",
+  // Shows a loading indicator at the caret while get runs. Default: true.
+  loading: true,
+  // Class name of the loading indicator. Default: a thin shimmering line under the text.
+  loadingClassName: "my-loading",
   // Called when get fails. The field keeps working without a suggestion.
   // Default: console.error.
   onError: (error) => {},
@@ -105,6 +109,68 @@ disappears before the click:
   </button>
 )}
 ```
+
+## Loading indicator
+
+While `get` runs, the hook shows a loading indicator: a thin line under the
+text that starts at the caret and runs forward, with a moving highlight. The
+line uses the text color of the field. It does not move or cover the text of
+the field, also in the middle of a line.
+
+To use your own indicator, give a class name in `loadingClassName`. The class
+replaces the built-in size, color, and animation. The element keeps only
+`position: absolute` in a zero-size box at the caret on the text baseline. Use
+`bottom` to lift it above the baseline and `inset-inline-start` to move it
+away from the caret, so it also works in right-to-left fields:
+
+```css
+.my-loading {
+  bottom: 0.05em;
+  inset-inline-start: 0.3em;
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  background: currentcolor;
+  animation: my-pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes my-pulse {
+  from {
+    opacity: 0.25;
+  }
+}
+```
+
+The built-in check for reduced motion does not apply to your class. Add your
+own rule:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  .my-loading {
+    animation: none;
+  }
+}
+```
+
+The zero-size box has `data-use-prediction-loading="end"` or
+`data-use-prediction-loading="middle"`: the second one when the line has text
+after the caret. Use it to give your indicator a smaller look there, where it
+must not cover that text:
+
+```css
+[data-use-prediction-loading="middle"] > .my-loading {
+  bottom: -0.4em;
+  inset-inline-start: 0;
+  width: 0.3em;
+  height: 0.3em;
+}
+```
+
+To show no indicator, set `loading: false`. You can show your own status
+outside the field with `prediction.status`.
+
+The built-in animation does not add a stylesheet to the page. When the user
+prefers reduced motion, the highlight does not move.
 
 ## Use with a UI kit or a form library
 
@@ -181,6 +247,7 @@ each render, and the hook keeps the same field attached.
 npm install
 npm run test:react19:install  # React 19 copy for the test matrix
 npm test                      # unit tests on React 18 and 19
+npm run verify                # types, unit tests, Biome, Knip, package build and checks
 npm run test:e2e              # Chromium, Firefox, WebKit on React 18 and 19
 npm run dev                   # stand; put LLM_* variables in .env.local
 npm run bench                 # comparison with and without suggestions

@@ -1,9 +1,9 @@
 {
-  "name": "use-prediction-react-19-fixture",
-  "private": true,
-  "description": "React 19 runtime used by the test matrix through Vite aliases",
-  "dependencies": {
-    "react": "19.2.9",
-    "react-dom": "19.2.9"
-  }
+	"name": "use-prediction-react-19-fixture",
+	"private": true,
+	"description": "React 19 runtime used by the test matrix through Vite aliases",
+	"dependencies": {
+		"react": "19.2.9",
+		"react-dom": "19.2.9"
+	}
 }
