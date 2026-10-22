@@ -1,6 +1,6 @@
 {
 	"name": "use-prediction",
-	"version": "0.0.4",
+	"version": "1.0.0",
 	"description": "Inline AI suggestions (ghost text) for existing React input and textarea fields",
 	"type": "module",
 	"license": "MIT",
