@@ -5,6 +5,8 @@ import ReactDOM from "react-dom/client"
 
 import { Demo } from "./demo"
 
+const COPIED_MS = 1500
+
 const container = document.querySelector("#demo")
 
 if (!container) {
@@ -16,3 +18,12 @@ ReactDOM.createRoot(container).render(
 		<Demo />
 	</React.StrictMode>,
 )
+
+for (const button of document.querySelectorAll<HTMLElement>("[data-copy]")) {
+	button.addEventListener("click", () => {
+		void navigator.clipboard.writeText(button.dataset.copy ?? "").then(() => {
+			button.dataset.copied = ""
+			setTimeout(() => delete button.dataset.copied, COPIED_MS)
+		})
+	})
+}

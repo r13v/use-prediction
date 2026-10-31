@@ -96,19 +96,22 @@ const INSTRUCTIONS =
 export const builtInAvailability = async (): Promise<Availability> =>
 	languageModel ? languageModel.availability(ENGLISH) : "unavailable"
 
+// How often to ask whether the model finished its download.
+const MODEL_POLL_MS = 1000
+
 /**
  * Creates the session that each request clones. Call it from a click when the
  * model is not downloaded yet: the browser starts the download only after a
  * user activation.
  */
-export const createBuiltInSession = (
+export const createBuiltInSession = async (
 	onDownload: (progress: number) => void,
 ) => {
 	if (!languageModel) {
 		throw new Error("The browser has no Prompt API")
 	}
 
-	return languageModel.create({
+	const session = await languageModel.create({
 		...ENGLISH,
 		initialPrompts: [{ role: "system", content: INSTRUCTIONS }],
 		monitor(monitor) {
@@ -117,6 +120,14 @@ export const createBuiltInSession = (
 			})
 		},
 	})
+
+	// Chrome can resolve create() while the model still downloads; its
+	// prompts then fail, so wait until the model reports that it can run.
+	while ((await builtInAvailability()) !== "available") {
+		await new Promise((resolve) => setTimeout(resolve, MODEL_POLL_MS))
+	}
+
+	return session
 }
 
 // A suggestion runs to the end of a clause, so a few words are enough.
@@ -143,7 +154,9 @@ export const builtIn =
 				],
 				{ signal },
 			)
-			const clause = /^[^.!?\n]*[.!?]?/.exec(answer)?.[0] ?? ""
+			// A model that starts a new paragraph still means the next words.
+			const text = answer.replace(/^\n+/, "")
+			const clause = /^[^.!?\n]*[.!?]?/.exec(text)?.[0] ?? ""
 			const words = clause.split(/(?<=\S)(?=\s)/).slice(0, MAX_WORDS)
 
 			return cleanSuggestion(before, after, words.join(""))
