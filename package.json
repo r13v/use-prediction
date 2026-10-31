@@ -82,6 +82,7 @@
 		"react": "^18.2.0",
 		"react-dom": "^18.2.0",
 		"react-hook-form": "^7.90.0",
+		"shiki": "^4.5.0",
 		"tsdown": "^0.22.14",
 		"tsx": "^4.23.15",
 		"typescript": "^5.0.2",

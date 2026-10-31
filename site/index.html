@@ -7,10 +7,63 @@
       name="description"
       content="Copilot-style AI suggestions for the React input and textarea you already have."
     />
-    <title>use-prediction</title>
+    <title>use-prediction — ghost-text AI suggestions for React fields</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist+Mono:wght@400..600&display=swap"
+    />
   </head>
   <body>
-    <main class="readme"><!-- readme --></main>
+    <header class="nav">
+      <a class="brand" href="#top">
+        <span class="mark" aria-hidden="true">⇥</span>
+        use-prediction
+        <span class="version">v{{version}}</span>
+      </a>
+      <nav aria-label="Links" class="links">
+        <a href="#docs">Docs</a>
+        <a href="https://www.npmjs.com/package/use-prediction">npm</a>
+        <a href="https://github.com/r13v/use-prediction">GitHub</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <p class="eyebrow">React hook · React 18 &amp; 19</p>
+        <h1 class="headline">{{headline}}</h1>
+        <p class="subline">{{subline}}</p>
+        <div class="actions">
+          <button class="install" type="button" data-copy="npm install use-prediction">
+            <span class="prompt" aria-hidden="true">$</span>
+            <code>npm install use-prediction</code>
+            <span class="copy-label">Copy</span>
+          </button>
+          <a class="button" href="#docs">Read the docs</a>
+        </div>
+      </section>
+
+      <div id="demo"></div>
+
+      <ul class="features">{{features}}</ul>
+
+      <div class="docs" id="docs">
+        <aside class="toc">
+          <p>On this page</p>
+          <ul>{{toc}}</ul>
+        </aside>
+        <article class="prose">{{docs}}</article>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <span>MIT License</span>
+      <a href="https://github.com/r13v/use-prediction">GitHub</a>
+      <a href="https://www.npmjs.com/package/use-prediction">npm</a>
+      <a href="https://github.com/r13v/use-prediction/blob/main/CHANGELOG.md">Changelog</a>
+    </footer>
+
     <script type="module" src="./main.tsx"></script>
   </body>
 </html>
