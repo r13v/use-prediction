@@ -1,17 +1,29 @@
 # use-prediction
 
-Inline AI suggestions for your existing React `<input>` and `<textarea>`
-fields. The user types, a suggestion appears as gray "ghost" text at the caret,
+Copilot-style AI suggestions for the `<input>` and `<textarea>` you already
+have. The user types, a suggestion appears as gray ghost text at the caret,
 and Tab inserts it.
 
-- **Any provider.** You give the hook an async `get` function. The hook does
-  not call an AI provider itself.
-- **Any UI kit.** The hook needs only the native element through a `ref`. It
-  works with controlled fields, form libraries, and component libraries.
-- **Native editing.** Accepted text goes through the browser's own insertion,
-  so React `onChange` runs and Undo works.
+**[Try the live demo →](https://r13v.github.io/use-prediction/)**
 
-React 18 and React 19 are supported.
+```tsx
+const prediction = usePrediction({ get: fetchSuggestion })
+
+return <textarea ref={prediction.ref} />
+```
+
+- **Keep your field.** No editor to adopt: the hook needs one ref on the
+  native element. Controlled fields, React Hook Form, MUI and other UI kits
+  work as they are.
+- **Any model.** You write `get`; the hook never calls an AI provider itself,
+  so your API key stays on your server.
+- **Native editing.** Accepted text goes through the browser's own insertion:
+  React `onChange` runs and Undo works.
+- **The hard parts are done.** Debounce, aborts of stale requests, typing
+  through a suggestion without a new request, suggestions in the middle of
+  the text, IME, modal dialogs and right-to-left text.
+- **Small and CSP-safe.** About 6 KB gzipped, no runtime dependencies, no
+  injected stylesheet. React 18 and 19.
 
 ## Installation
 
@@ -41,31 +53,24 @@ export const Message = () => {
 }
 ```
 
-Your server sends the text to the model and returns the suggestion. Keep the
-API key on the server. For a complete server with the OpenAI SDK, see
-[`examples/server.ts`](examples/server.ts).
+Your server sends the text to the model and returns the suggestion. For a
+complete server with the OpenAI SDK, see [`examples/`](examples).
 
 ## How it behaves
 
 | Action | Result |
 | --- | --- |
-| The user stops typing for `debounce` ms | The hook calls `get` with the text before and after the caret. A loading indicator appears at the caret until the response arrives. |
+| The user stops typing for `debounce` ms | The hook calls `get` with the text before and after the caret. A loading indicator appears at the caret. |
 | The user types the first characters of the suggestion | The suggestion gets shorter. There is no new request. |
-| The user keeps typing at the caret while a request is in progress | The hook waits for the response and shows the part that the user did not type yet. |
-| Cmd+→ (macOS) or Ctrl+→ | Inserts the next word of the suggestion. The rest stays visible. |
-| The user types other text, deletes text, or moves the caret | The suggestion disappears, and the hook aborts the request. |
-| The value changes without typing, for example a form reset | The suggestion disappears. |
-| Tab | Inserts the suggestion. When there is no suggestion, Tab moves focus as usual. |
-| Escape | Hides the suggestion. While a suggestion is visible, Escape does not close a dialog that contains the field. |
-| Blur, IME composition | Hides the suggestion. |
+| Tab | Inserts the suggestion. Without a suggestion, Tab moves focus as usual. |
+| Cmd+→ (macOS) or Ctrl+→ | Inserts the next word. The rest stays visible. |
+| Escape | Hides the suggestion. While a suggestion is visible, Escape does not close the dialog that contains the field. |
+| Other typing, deletion, a caret move, blur, IME composition, or a value change without typing | Hides the suggestion and aborts the request. |
 
 The hook shows a response only if the text and the caret did not change since
 the request, or if the user only typed the first characters of the response.
-It aborts the `signal` of a request that can no longer be used.
-
-The hook works with `<textarea>` and with `<input>` of type `text`, `search`,
-`tel`, and `url`. For other inputs, such as `password` or `email`, it does
-nothing.
+It works with `<textarea>` and with `<input>` of type `text`, `search`, `tel`
+and `url`; for other inputs it does nothing.
 
 ## API
 
@@ -81,8 +86,7 @@ const prediction = usePrediction({
   loading: true,
   // Class name of the loading indicator. Default: a thin shimmering line under the text.
   loadingClassName: "my-loading",
-  // Called when get fails. The field keeps working without a suggestion.
-  // Default: console.error.
+  // Called when get fails. The field keeps working. Default: console.error.
   onError: (error) => {},
 })
 
@@ -93,10 +97,9 @@ prediction.accept() // Inserts the suggestion. Returns false when there is none.
 prediction.dismiss() // Hides the suggestion and cancels the request.
 ```
 
-Use `status`, `suggestion`, and `accept` to build your own hints, for example
-a "Tab" badge or an accept button on touch devices. A button must keep the
-focus in the field. Otherwise, the field loses focus and the suggestion
-disappears before the click:
+Use `status`, `suggestion` and `accept` for your own hints, such as a "Tab"
+badge or an accept button on touch devices. The button must keep the focus in
+the field, or the suggestion disappears before the click:
 
 ```tsx
 {prediction.suggestion && (
@@ -110,72 +113,11 @@ disappears before the click:
 )}
 ```
 
-## Loading indicator
-
-While `get` runs, the hook shows a loading indicator: a thin line under the
-text that starts at the caret and runs forward, with a moving highlight. The
-line uses the text color of the field. It does not move or cover the text of
-the field, also in the middle of a line.
-
-To use your own indicator, give a class name in `loadingClassName`. The class
-replaces the built-in size, color, and animation. The element keeps only
-`position: absolute` in a zero-size box at the caret on the text baseline. Use
-`bottom` to lift it above the baseline and `inset-inline-start` to move it
-away from the caret, so it also works in right-to-left fields:
-
-```css
-.my-loading {
-  bottom: 0.05em;
-  inset-inline-start: 0.3em;
-  width: 0.5em;
-  height: 0.5em;
-  border-radius: 50%;
-  background: currentcolor;
-  animation: my-pulse 1s ease-in-out infinite alternate;
-}
-
-@keyframes my-pulse {
-  from {
-    opacity: 0.25;
-  }
-}
-```
-
-The built-in check for reduced motion does not apply to your class. Add your
-own rule:
-
-```css
-@media (prefers-reduced-motion: reduce) {
-  .my-loading {
-    animation: none;
-  }
-}
-```
-
-The zero-size box has `data-use-prediction-loading="end"` or
-`data-use-prediction-loading="middle"`: the second one when the line has text
-after the caret. Use it to give your indicator a smaller look there, where it
-must not cover that text:
-
-```css
-[data-use-prediction-loading="middle"] > .my-loading {
-  bottom: -0.4em;
-  inset-inline-start: 0;
-  width: 0.3em;
-  height: 0.3em;
-}
-```
-
-To show no indicator, set `loading: false`. You can show your own status
-outside the field with `prediction.status`.
-
-The built-in animation does not add a stylesheet to the page. When the user
-prefers reduced motion, the highlight does not move.
-
 ## Use with a UI kit or a form library
 
 Give `prediction.ref` to the native element. If the component already uses a
-ref, call both refs from one callback:
+ref, call both refs from one callback. An inline callback is safe: the hook
+keeps the same field attached across renders.
 
 ```tsx
 // React Hook Form
@@ -198,57 +140,66 @@ const { ref, ...field } = register("summary")
 />
 ```
 
-```tsx
-// form-please: a custom control
-const PredictedTextarea = ({ value, setValue, blur, input, props }) => {
-  const prediction = usePrediction({ get: props.predict })
+## Custom loading indicator
 
-  return (
-    <textarea
-      id={input.id}
-      name={input.name}
-      value={value ?? ""}
-      onChange={(event) => setValue(event.currentTarget.value)}
-      onBlur={blur}
-      ref={(node) => {
-        input.ref(node)
-        prediction.ref(node)
-      }}
-    />
-  )
+The built-in indicator is a thin line under the text that starts at the caret
+and runs forward in the field's text color. It never moves or covers the text,
+and its highlight stops when the user prefers reduced motion.
+
+A class in `loadingClassName` replaces the built-in size, color and animation.
+The element sits in a zero-size box at the caret on the text baseline; move it
+with `bottom` and `inset-inline-start`, so it also works in right-to-left
+fields. The box has `data-use-prediction-loading="middle"` when the line has
+text after the caret, and `"end"` otherwise. Add your own reduced-motion rule:
+
+```css
+.my-loading {
+  bottom: 0.05em;
+  inset-inline-start: 0.3em;
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  background: currentcolor;
+  animation: my-pulse 1s ease-in-out infinite alternate;
+}
+
+[data-use-prediction-loading="middle"] > .my-loading {
+  bottom: -0.4em;
+  inset-inline-start: 0;
+}
+
+@keyframes my-pulse {
+  from {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-loading {
+    animation: none;
+  }
 }
 ```
 
-An inline callback like the ones above is safe. React gives a new callback on
-each render, and the hook keeps the same field attached.
+To show no indicator, set `loading: false` and use `prediction.status`.
 
 ## Limits
 
-- The ghost text is an overlay in `document.body`, or in the open `<dialog>` or
-  popover that contains the field. When a scroll container cuts off part of the
-  field, the overlay is not cut off.
+- The ghost text is an overlay in `document.body`, or in the open `<dialog>`
+  or popover that contains the field. A scroll container that cuts off the
+  field does not cut off the overlay.
 - When the caret is in the middle of the text, the field hides its own text
   while the suggestion is visible, and the overlay shows the full text.
-- In Safari, one Undo can remove the accepted suggestion together with the text
-  typed just before it.
+- In Safari, one Undo can remove the accepted suggestion together with the
+  text typed just before it.
 - When `execCommand("insertText")` is not available, the hook sets the value
-  and sends an `input` event. React still sees the change, but Undo does not
-  include it.
+  and sends an `input` event. React sees the change, but Undo does not include
+  it.
 
-## Migration from 0.0.x
+## More
 
-- `get(value, controller)` is now `get({ text, before, after, signal })`.
-- The `color` and `style` options are removed. Use `className`.
-- `ref` is a callback ref. You can merge it with other refs.
+- [Migration from 0.0.x](docs/migration-from-0.0.md)
+- [Development](docs/development.md)
+- [Changelog](CHANGELOG.md)
 
-## Development
-
-```bash
-npm install
-npm run test:react19:install  # React 19 copy for the test matrix
-npm test                      # unit tests on React 18 and 19
-npm run verify                # types, unit tests, Biome, Knip, package build and checks
-npm run test:e2e              # Chromium, Firefox, WebKit on React 18 and 19
-npm run dev                   # stand; put LLM_* variables in .env.local
-npm run bench                 # comparison with and without suggestions
-```
+MIT License
