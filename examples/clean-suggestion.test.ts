@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 
-import { cleanSuggestion } from "./server"
+import { cleanSuggestion } from "./clean-suggestion"
 
 describe("cleanSuggestion", () => {
 	it.each([["_empty_"], [" <empty>"], ["(none)"], ["[no suggestion]"]])(
