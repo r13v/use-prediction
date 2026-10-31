@@ -90,7 +90,7 @@ const ENGLISH = {
 }
 
 const INSTRUCTIONS =
-	"You continue the text that a person types into a form field. Write only the next few words of their sentence, in their tone. Never invent names, numbers or dates."
+	"You continue the text that a person types into a form field. Write only the next few words of their sentence, in their tone. When their sentence is finished, write the next sentence on the same line. Never start a new line. Never invent names, numbers or dates."
 
 /** "unavailable" also covers browsers without the Prompt API. */
 export const builtInAvailability = async (): Promise<Availability> =>
@@ -150,12 +150,20 @@ export const builtIn =
 						role: "user",
 						content: `Field: ${context}\nText after the cursor: <<<${after}>>>\nContinue my text.`,
 					},
-					{ role: "assistant", content: before, prefix: true },
+					// With a trailing space the model answers "" or "\n" most of the time.
+					{ role: "assistant", content: before.trimEnd(), prefix: true },
 				],
 				{ signal },
 			)
-			// A model that starts a new paragraph still means the next words.
-			const text = answer.replace(/^\n+/, "")
+			// After a finished sentence the model starts a new paragraph; keep it on the line.
+			const sameLine = answer.replace(/^\s*\n\s*/, " ")
+			// The user ended the word with a space; "We" + "'re" no longer fits.
+			const continuesWord = /\s$/.test(before) && /^\S/.test(sameLine)
+
+			if (continuesWord) return ""
+
+			// An ellipsis means the model ran out of words.
+			const [text] = sameLine.split(/\.\.\.|…/)
 			const clause = /^[^.!?\n]*[.!?]?/.exec(text)?.[0] ?? ""
 			const words = clause.split(/(?<=\S)(?=\s)/).slice(0, MAX_WORDS)
 
